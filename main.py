@@ -20,12 +20,6 @@ EMOTION_WINDOW_SECONDS = 2.0
 MODEL_NAME = "harshit345/xlsr-wav2vec-speech-emotion-recognition"
 
 # Mapeo de emociones
-#EMOTION_MAP = {
-#    'neu': "neutral",
-#    'hap': "happy",
-#    'ang': "angry",
-#    'sad': "sad"
-#}
 EMOTION_MAP = {
     "anger": "angry",
     "disgust": "angry",  # Mapeamos asco -> enojo
@@ -38,14 +32,14 @@ EMOTION_MAP = {
 
 # Rutas de imágenes
 AVATAR_IMAGES = {
-    "neutral_closed": "avatars/neutral_closed.png",
-    "neutral_open": "avatars/neutral_open.png",
-    "happy_closed": "avatars/happy_closed.png",
-    "happy_open": "avatars/happy_open.png",
-    "angry_closed": "avatars/angry_closed.png",
-    "angry_open": "avatars/angry_open.png",
-    "sad_closed": "avatars/sad_closed.png",
-    "sad_open": "avatars/sad_open.png",
+    "neutral_closed": "avatars/neutral_closed.PNG",
+    "neutral_open": "avatars/neutral_open.PNG",
+    "happy_closed": "avatars/happy_closed.PNG",
+    "happy_open": "avatars/happy_open.PNG",
+    "angry_closed": "avatars/angry_closed.PNG",
+    "angry_open": "avatars/angry_open.PNG",
+    "sad_closed": "avatars/sad_closed.PNG",
+    "sad_open": "avatars/sad_open.PNG",
 }
 
 class AudioMonitorThread(QThread):
