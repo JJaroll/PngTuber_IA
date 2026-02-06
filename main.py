@@ -15,7 +15,7 @@ CHUNK_SIZE = 1024
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 16000  # Wav2Vec2 suele requerir 16kHz
-VOLUME_THRESHOLD = 0.01  # Ajustar según sensibilidad del mic
+VOLUME_THRESHOLD = 0.02  # Ajustado para RMS (approx -34dB). Subir si detecta ruido.
 EMOTION_WINDOW_SECONDS = 2.0
 MODEL_NAME = "harshit345/xlsr-wav2vec-speech-emotion-recognition"
 
@@ -62,9 +62,9 @@ class AudioMonitorThread(QThread):
                 data = self.stream.read(CHUNK_SIZE, exception_on_overflow=False)
                 audio_chunk = np.frombuffer(data, dtype=np.float32)
                 
-                # Detectar volumen para lip sync instantáneo
-                volume = np.linalg.norm(audio_chunk) * 10
-                is_speaking = volume > VOLUME_THRESHOLD
+                # Detectar volumen usando RMS (Root Mean Square)
+                rms = np.sqrt(np.mean(audio_chunk**2))
+                is_speaking = rms > VOLUME_THRESHOLD
                 self.volume_signal.emit(bool(is_speaking))
 
                 # Enviar datos para análisis de emoción
@@ -124,6 +124,13 @@ class EmotionThread(QThread):
 
     def predict_emotion(self, audio_data):
         try:
+            # Gating de silencio: Si el volumen promedio del segmento es muy bajo, forzar neutral
+            window_rms = np.sqrt(np.mean(audio_data**2))
+            if window_rms < VOLUME_THRESHOLD:
+                self.emotion_signal.emit("neutral")
+                # print(f"Silencio detectado ({window_rms:.4f} < {VOLUME_THRESHOLD}). Forzando neutral.")
+                return
+
             inputs = self.feature_extractor(audio_data, sampling_rate=RATE, return_tensors="pt", padding=True)
             input_values = inputs.input_values.to(self.device)
 
