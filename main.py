@@ -16,15 +16,24 @@ FORMAT = pyaudio.paFloat32
 CHANNELS = 1
 RATE = 16000  # Wav2Vec2 suele requerir 16kHz
 VOLUME_THRESHOLD = 0.01  # Ajustar según sensibilidad del mic
-EMOTION_WINDOW_SECONDS = 1.5
-MODEL_NAME = "superb/wav2vec2-base-superb-er"
+EMOTION_WINDOW_SECONDS = 2.0
+MODEL_NAME = "harshit345/xlsr-wav2vec-speech-emotion-recognition"
 
 # Mapeo de emociones
+#EMOTION_MAP = {
+#    'neu': "neutral",
+#    'hap': "happy",
+#    'ang': "angry",
+#    'sad': "sad"
+#}
 EMOTION_MAP = {
-    'neu': "neutral",
-    'hap': "happy",
-    'ang': "angry",
-    'sad': "sad"
+    "anger": "angry",
+    "disgust": "angry",  # Mapeamos asco -> enojo
+    "fear": "sad",       # Miedo suele verse como preocupación/tristeza
+    "happiness": "happy",
+    "sadness": "sad",
+    "surprise": "happy", # Sorpresa -> felicidad/excitación
+    "neutral": "neutral" # Por si acaso el modelo lo detecta (aunque usaremos volumen para esto)
 }
 
 # Rutas de imágenes
@@ -127,19 +136,23 @@ class EmotionThread(QThread):
             with torch.no_grad():
                 logits = self.model(input_values).logits
 
-            # --- CAMBIO AQUÍ PARA SUPERB ---
+            # --- LÓGICA FLEXIBLE ---
             predicted_class_id = torch.argmax(logits, dim=-1).item()
-            # Obtenemos la etiqueta de texto del modelo (ej: 'hap', 'neu')
-            predicted_label = self.model.config.id2label[predicted_class_id]
             
-            # Buscamos esa etiqueta en nuestro mapa
+            # Obtenemos la etiqueta del modelo (puede ser 'anger' o 'ang' o '0')
+            raw_label = self.model.config.id2label[predicted_class_id]
+            
+            # Convertimos a minúsculas para evitar errores (Ej: 'Anger' -> 'anger')
+            predicted_label = str(raw_label).lower()
+            
+            # Buscamos en el mapa, si no existe, mantenemos la emoción actual o neutral
             emotion = EMOTION_MAP.get(predicted_label, "neutral")
             
             self.emotion_signal.emit(emotion)
-            print(f"Detectado: {predicted_label} -> Avatar: {emotion}") # Debug útil
+            print(f"IA: {raw_label} ({predicted_class_id}) -> Avatar: {emotion}")
 
         except Exception as e:
-            print(f"Error en inferencia: {e}")
+            print(f"Error inferencia: {e}")
 
     def stop(self):
         self.running = False
