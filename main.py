@@ -5,7 +5,7 @@ import threading
 import numpy as np
 import pyaudio
 import torch
-from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt6.QtGui import QPixmap, QImage
 from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtractor
@@ -56,27 +56,33 @@ class AudioMonitorThread(QThread):
                                   frames_per_buffer=CHUNK_SIZE)
 
     def run(self):
-        while self.running:
-            try:
-                data = self.stream.read(CHUNK_SIZE, exception_on_overflow=False)
-                audio_chunk = np.frombuffer(data, dtype=np.float32)
-                
-                # Detectar volumen usando RMS (Root Mean Square)
-                rms = np.sqrt(np.mean(audio_chunk**2))
-                is_speaking = rms > VOLUME_THRESHOLD
-                self.volume_signal.emit(bool(is_speaking))
+        try:
+            while self.running:
+                try:
+                    data = self.stream.read(CHUNK_SIZE, exception_on_overflow=False)
+                    audio_chunk = np.frombuffer(data, dtype=np.float32)
+                    
+                    # Detectar volumen usando RMS (Root Mean Square)
+                    rms = np.sqrt(np.mean(audio_chunk**2))
+                    is_speaking = rms > VOLUME_THRESHOLD
+                    self.volume_signal.emit(bool(is_speaking))
 
-                # Enviar datos para análisis de emoción
-                self.audio_data_signal.emit(audio_chunk)
+                    # Enviar datos para análisis de emoción
+                    self.audio_data_signal.emit(audio_chunk)
 
-            except Exception as e:
-                print(f"Error en audio thread: {e}")
+                except Exception as e:
+                    print(f"Error en audio thread: {e}")
+                    break
+        finally:
+            # Limpieza segura en el mismo hilo
+            if self.stream.is_active():
+                self.stream.stop_stream()
+            self.stream.close()
+            self.p.terminate()
+            print("Audio thread cerrado correctamente.")
 
     def stop(self):
         self.running = False
-        self.stream.stop_stream()
-        self.stream.close()
-        self.p.terminate()
 
 class EmotionThread(QThread):
     emotion_signal = pyqtSignal(str) # "neutral", "happy", "angry", "sad"
@@ -174,6 +180,20 @@ class PNGTuberApp(QMainWindow):
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
         self.layout.setContentsMargins(0, 0, 0, 0)
+
+        # Importar y añadir controles de Mac
+        from mac_gui import MacWindowControls
+        self.mac_controls = MacWindowControls(self)
+        self.mac_controls.close_signal.connect(self.close)
+        self.mac_controls.minimize_signal.connect(self.showMinimized)
+        
+        # Añadir controles al layout superior
+        controls_layout = QHBoxLayout()
+        controls_layout.setContentsMargins(10, 10, 0, 0) # Margen para que no quede pegado
+        controls_layout.addWidget(self.mac_controls)
+        controls_layout.addStretch() # Empujar a la izquierda
+        
+        self.layout.addLayout(controls_layout)
 
         # Avatar Label
         self.avatar_label = QLabel(self)
