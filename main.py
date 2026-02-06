@@ -17,17 +17,16 @@ CHANNELS = 1
 RATE = 16000  # Wav2Vec2 suele requerir 16kHz
 VOLUME_THRESHOLD = 0.02  # Ajustado para RMS (approx -34dB). Subir si detecta ruido.
 EMOTION_WINDOW_SECONDS = 2.0
-MODEL_NAME = "harshit345/xlsr-wav2vec-speech-emotion-recognition"
+MODEL_NAME = "somosnlp-hackathon-2022/wav2vec2-base-finetuned-sentiment-classification-MESD"
 
 # Mapeo de emociones
 EMOTION_MAP = {
     "anger": "angry",
-    "disgust": "angry",  # Mapeamos asco -> enojo
-    "fear": "sad",       # Miedo suele verse como preocupación/tristeza
+    "disgust": "angry",  # Asco -> Cara de enojo
+    "fear": "sad",       # Miedo -> Cara de susto/tristeza
     "happiness": "happy",
     "sadness": "sad",
-    "surprise": "happy", # Sorpresa -> felicidad/excitación
-    "neutral": "neutral" # Por si acaso el modelo lo detecta (aunque usaremos volumen para esto)
+    "neutral": "neutral"
 }
 
 # Rutas de imágenes
