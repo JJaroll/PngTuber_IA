@@ -117,7 +117,8 @@ class PNGTuberApp(QMainWindow):
         # 1. Inicializar Gestor de Perfiles
         self.profile_manager = AvatarProfileManager()
 
-        # 2. Configuración Ventana
+        # 2. Configuración Ventana (MODO TRANSPARENTE)
+        # Quitamos bordes nativos y activamos transparencia
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.resize(400, 400)
@@ -127,16 +128,19 @@ class PNGTuberApp(QMainWindow):
         self.layout = QVBoxLayout(self.central_widget)
         self.layout.setContentsMargins(0, 0, 0, 0)
 
-        # 3. Interfaz Mac
+        # 3. Insertar Barra Mac Personalizada
         self.mac_controls = MacWindowControls(self)
         self.mac_controls.close_signal.connect(self.close)
         self.mac_controls.minimize_signal.connect(self.showMinimized)
         
-        top = QHBoxLayout()
-        top.setContentsMargins(10, 10, 0, 0)
-        top.addWidget(self.mac_controls)
-        top.addStretch()
-        self.layout.addLayout(top)
+        # Layout horizontal superior para los botones
+        top_bar = QHBoxLayout()
+        # Margen (Izquierda, Arriba, Derecha, Abajo) -> 13px izq/arriba simula padding nativo
+        top_bar.setContentsMargins(13, 13, 0, 0) 
+        top_bar.addWidget(self.mac_controls)
+        top_bar.addStretch() # Empuja los botones a la izquierda
+        
+        self.layout.addLayout(top_bar)
 
         # 4. Avatar Label
         self.avatar_label = QLabel(self)
