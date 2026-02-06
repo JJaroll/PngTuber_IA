@@ -1,5 +1,7 @@
 import os
 import shutil
+import zipfile
+import json
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QPushButton, QFileDialog, QMessageBox, QGridLayout, QScrollArea, QWidget)
 from PyQt6.QtCore import Qt
@@ -107,6 +109,56 @@ class ProfileCreatorDialog(QDialog):
                     shutil.copy2(src, dst)
             
             QMessageBox.information(self, "Éxito", f"Skin '{name}' creado correctamente.")
+            
+            # --- PREGUNTAR SI DESEA EXPORTAR .ptuber ---
+            reply = QMessageBox.question(
+                self, "Exportar Skin", 
+                "¿Deseas guardar un archivo .ptuber para compartir este skin?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+
+            if reply == QMessageBox.StandardButton.Yes:
+                self.export_ptuber(name, target_dir)
+
             self.accept()
         except Exception as e:
             QMessageBox.critical(self, "Error Fatal", f"No se pudo crear el perfil:\n{e}")
+
+    def export_ptuber(self, name, source_dir):
+        # Pedir ubicación de guardado
+        save_path, _ = QFileDialog.getSaveFileName(
+            self, "Guardar Skin Compacto", 
+            f"{name}.ptuber", 
+            "PNGTuber Profile (*.ptuber)"
+        )
+
+        if not save_path:
+            return
+
+        try:
+            # Crear metadata básica
+            meta = {
+                "name": name,
+                "version": "1.0",
+                "author": "Usuario" # Podríamos pedirlo, pero simplificamos
+            }
+            meta_path = os.path.join(source_dir, "meta.json")
+            with open(meta_path, "w") as f:
+                json.dump(meta, f, indent=4)
+
+            # Crear ZIP (.ptuber)
+            with zipfile.ZipFile(save_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Agregar metadata
+                zipf.write(meta_path, "meta.json")
+                # Agregar imágenes
+                for filename in os.listdir(source_dir):
+                    if filename.endswith(".PNG") or filename.endswith(".png"):
+                        zipf.write(os.path.join(source_dir, filename), filename)
+            
+            # Limpiar metadata temporal
+            os.remove(meta_path)
+
+            QMessageBox.information(self, "Exportado", f"Archivo guardado en:\n{save_path}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error Exportación", f"Falló al crear el archivo .ptuber:\n{e}")
