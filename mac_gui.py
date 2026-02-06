@@ -6,6 +6,7 @@ class MacWindowControls(QWidget):
     close_signal = pyqtSignal()
     minimize_signal = pyqtSignal()
     maximize_signal = pyqtSignal() # Not used but good practice
+    #comentario para que git lo suba
 
     def __init__(self, parent=None):
         super().__init__(parent)

@@ -200,8 +200,16 @@ class PNGTuberApp(QMainWindow):
         self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.layout.addWidget(self.avatar_label)
 
+        # Gestor de fondo
+        from background import BackgroundManager
+        self.bg_manager = BackgroundManager(self)
+
         # Placeholder visuals (generar imágenes dummy si no existen)
         self.generate_placeholders()
+
+    def contextMenuEvent(self, event):
+        self.bg_manager.show_context_menu(event.pos())
+
 
         # Iniciar hilos
         self.audio_thread = AudioMonitorThread()
