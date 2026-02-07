@@ -9,6 +9,7 @@ from profile_manager import AvatarProfileManager
 from background import BackgroundManager
 from mac_gui import MacWindowControls
 from config_manager import ConfigManager
+from hotkey_manager import HotkeyManager
 from core_systems import AudioMonitorThread, EmotionThread # <--- Usamos el nuevo módulo
 
 class PNGTuberApp(QMainWindow):
@@ -51,11 +52,17 @@ class PNGTuberApp(QMainWindow):
         self.emotion_thread.emotion_signal.connect(self.update_emotion)
         self.emotion_thread.start()
 
-        # 5. Timer de Animación (Rebote)
         self.bounce_timer = QTimer()
         self.bounce_timer.timeout.connect(self.animate_bounce)
         self.bounce_timer.start(30)
-
+ 
+        # 6. Gestor de Hotkeys
+        self.ai_mode = True
+        self.hotkey_manager = HotkeyManager(self.config_manager)
+        self.hotkey_manager.hotkey_triggered.connect(self.handle_hotkey)
+        # Retrasamos inicio para evitar conflicto con loop de eventos en macOS
+        QTimer.singleShot(1000, self.hotkey_manager.start_listening)
+        
         # Estado inicial
         self.update_avatar()
 
@@ -144,9 +151,40 @@ class PNGTuberApp(QMainWindow):
             self.update_avatar()
 
     def update_emotion(self, emo):
-        if self.current_emotion != emo:
+        if self.ai_mode and self.current_emotion != emo:
             self.current_emotion = emo
             self.update_avatar()
+
+    def handle_hotkey(self, action):
+        print(f"Hotkey: {action}")
+        if action == "mute_toggle":
+            self.set_muted(not self.is_muted)
+        elif action == "ai_mode":
+            self.ai_mode = True
+            print("🤖 Modo IA Activado")
+        elif action in ["neutral", "happiness", "anger", "sadness", "fear", "disgust"]:
+            self.ai_mode = False
+            # Mapeo de teclas a nombres de archivo internos si es necesario
+            # config defaults: neutral, happiness, anger, sadness, fear, disgust
+            # EMOTION_MAP keys: anger, disgust, fear, happiness, sadness, neutral
+            # Internamente usamos: angry, happy, sad, neutral
+            
+            # Mapeo manual para asegurar compatibilidad con archivos
+            manual_map = {
+                "neutral": "neutral",
+                "happiness": "happy",
+                "anger": "angry", 
+                "sadness": "sad",
+                "fear": "sad", # A veces fear comparte imagen
+                "disgust": "angry" # A veces disgust comparte imagen
+            }
+            # O mejor, usamos el nombre directo si coincide con los nombres de archivo que espera profile_manager
+            # profile_manager busca: {emotion}_{state}.PNG
+            
+            target_emo = manual_map.get(action, "neutral")
+            self.current_emotion = target_emo
+            self.update_avatar()
+            print(f"🛑 Modo Manual: {action} -> {target_emo}")
 
     # --- SETTERS (Aquí conectamos con background.py) ---
     # ¡ESTAS SON LAS FUNCIONES QUE TU MENÚ NECESITA!
@@ -204,6 +242,7 @@ class PNGTuberApp(QMainWindow):
         QTimer.singleShot(200, lambda: self.resize(self.width() - 1, self.height()))
 
     def closeEvent(self, event):
+        self.hotkey_manager.stop_listening()
         self.audio_thread.stop()
         self.emotion_thread.stop()
         event.accept()

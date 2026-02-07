@@ -1,10 +1,21 @@
 {
     "current_profile": "Nuevo",
-    "bounce_enabled": true,
+    "bounce_enabled": false,
     "bounce_amplitude": 3,
     "bounce_speed": 0.1,
     "shadow_enabled": false,
     "is_muted": false,
     "background_color": "#0000FE",
-    "microphone_index": 1
+    "microphone_index": 1,
+    "enable_hotkeys": true,
+    "hotkeys": {
+        "mute_toggle": "m",
+        "ai_mode": "x",
+        "neutral": "1",
+        "disgust": "6",
+        "fear": "5",
+        "happiness": "2",
+        "sadness": "3",
+        "anger": "4"
+    }
 }
