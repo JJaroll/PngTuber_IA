@@ -3,7 +3,7 @@
     "bounce_enabled": false,
     "bounce_amplitude": 28,
     "bounce_speed": 0.7,
-    "shadow_enabled": false,
+    "shadow_enabled": true,
     "is_muted": false,
     "background_color": "transparent",
     "microphone_index": 1
