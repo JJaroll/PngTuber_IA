@@ -431,10 +431,22 @@ class PNGTuberApp(QMainWindow):
 
     def showEvent(self, event):
         super().showEvent(event)
-        # Force a small resize to ensure transparency mask is applied correctly on macOS
-        # sometimes the initial paint event doesn't catch the translucent attribute
-        self.resize(self.width(), self.height())
-        self.update()
+        
+        # --- FIX PARA MACOS (VERSIÓN AGRESIVA) ---
+        # Separamos el cambio de tamaño en dos momentos distintos
+        # para asegurar que el sistema procese el repintado.
+        
+        def expand():
+            self.resize(self.width() + 1, self.height())
+            
+        def restore():
+            self.resize(self.width() - 1, self.height())
+
+        # Paso 1: Crecer 1 pixel después de 100ms
+        QTimer.singleShot(100, expand)
+        
+        # Paso 2: Volver al tamaño original después de 200ms
+        QTimer.singleShot(200, restore)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

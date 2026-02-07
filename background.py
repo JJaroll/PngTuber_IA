@@ -80,14 +80,14 @@ class BackgroundManager:
         skin_menu.addAction(new_skin_action)
 
         # Opción 2: Importar .ptuber
-        import_action = QAction("📥 Importar Skin (.ptuber)...", self.main_window)
-        import_action.triggered.connect(self.import_profile)
-        skin_menu.addAction(import_action)
+        import_act = QAction("📥 Importar Skin (.ptuber)...", self.main_window)
+        import_act.triggered.connect(self.import_skin_dialog)
+        skin_menu.addAction(import_act)
 
         # Opción 3: Exportar actual
-        export_action = QAction("📤 Exportar Skin Actual...", self.main_window)
-        export_action.triggered.connect(self.export_current_profile)
-        skin_menu.addAction(export_action)
+        export_act = QAction(f"📤 Exportar '{self.profile_manager.current_profile}'...", self.main_window)
+        export_act.triggered.connect(self.export_current_skin)
+        skin_menu.addAction(export_act)
 
         skin_menu.addSeparator()
 
@@ -266,3 +266,37 @@ class BackgroundManager:
         action = QWidgetAction(menu)
         action.setDefaultWidget(container)
         menu.addAction(action)
+
+    # --- CÓDIGO FALTANTE DE INTERFAZ ---
+
+    def export_current_skin(self):
+        current_name = self.profile_manager.current_profile
+        file_path, _ = QFileDialog.getSaveFileName(
+            self.main_window, 
+            "Exportar Skin", 
+            f"{current_name}.ptuber", 
+            "Archivos PNGTuber (*.ptuber)"
+        )
+        
+        if file_path:
+            success, msg = self.profile_manager.export_skin_package(current_name, file_path)
+            if success:
+                QMessageBox.information(self.main_window, "Éxito", f"Skin guardado en:\n{file_path}")
+            else:
+                QMessageBox.critical(self.main_window, "Error", f"No se pudo exportar: {msg}")
+
+    def import_skin_dialog(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self.main_window, 
+            "Importar Skin", 
+            "", 
+            "Archivos PNGTuber (*.ptuber)"
+        )
+        
+        if file_path:
+            success, result = self.profile_manager.import_skin_package(file_path)
+            if success:
+                self.change_profile(result)
+                QMessageBox.information(self.main_window, "Éxito", f"Skin '{result}' importado y activado.")
+            else:
+                QMessageBox.critical(self.main_window, "Error", f"Archivo inválido: {result}")    

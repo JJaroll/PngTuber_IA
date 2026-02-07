@@ -17,19 +17,19 @@ class ConfigManager:
 
     def load_config(self):
         if not os.path.exists(self.filepath):
-            return self.default_config
+            return self.default_config.copy()
         
         try:
             with open(self.filepath, "r") as f:
                 config = json.load(f)
-                # Merge with defaults to ensure all keys exist
+                # Asegurar que existan todas las claves por defecto
                 for key, value in self.default_config.items():
                     if key not in config:
                         config[key] = value
                 return config
         except Exception as e:
             print(f"Error loading config: {e}")
-            return self.default_config
+            return self.default_config.copy()
 
     def save_config(self, config):
         try:
@@ -37,3 +37,16 @@ class ConfigManager:
                 json.dump(config, f, indent=4)
         except Exception as e:
             print(f"Error saving config: {e}")
+
+    # --- MÉTODOS QUE FALTABAN ---
+
+    def set(self, key, value):
+        """Carga, actualiza un valor y guarda automáticamente."""
+        config = self.load_config()
+        config[key] = value
+        self.save_config(config)
+
+    def get(self, key):
+        """Obtiene un valor de la configuración."""
+        config = self.load_config()
+        return config.get(key, self.default_config.get(key))
