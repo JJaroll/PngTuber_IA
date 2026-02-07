@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QMenu, QWidget, QVBoxLayout, QLabel, QSlider, QWidge
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
 from profile_creator import ProfileCreatorDialog
+from hotkey_gui import HotkeyConfigDialog
 
 class BackgroundManager:
     def __init__(self, main_window, profile_manager, config_manager): 
@@ -103,6 +104,13 @@ class BackgroundManager:
         self.create_slider_action(bounce_menu, "Amplitud Rebote", 0, 50, self.main_window.bounce_amplitude, self.main_window.set_bounce_amplitude)
         self.create_slider_action(bounce_menu, "Velocidad Rebote", 1, 20, self.main_window.bounce_speed, self.main_window.set_bounce_speed, resolution=10)
 
+        menu.addSeparator()
+
+        # Configuración Hotkeys
+        hotkey_action = QAction("⌨️ Configurar Hotkeys...", self.main_window)
+        hotkey_action.triggered.connect(self.open_hotkey_config)
+        menu.addAction(hotkey_action)
+
         menu.exec(self.main_window.mapToGlobal(position))
 
     # --- LÓGICA CORREGIDA ---
@@ -130,6 +138,11 @@ class BackgroundManager:
         dialog = ProfileCreatorDialog(self.main_window)
         if dialog.exec():
             self.profile_manager.scan_profiles()
+
+    def open_hotkey_config(self):
+        dialog = HotkeyConfigDialog(self.main_window)
+        dialog.exec()
+
 
     def import_skin_dialog(self):
         path, _ = QFileDialog.getOpenFileName(self.main_window, "Importar Skin (.ptuber)", "", "PNGTuber Profile (*.ptuber)")
