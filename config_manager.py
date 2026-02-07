@@ -14,7 +14,18 @@ class ConfigManager(QObject):
             "shadow_enabled": True,
             "is_muted": False,
             "background_color": "transparent",
-            "microphone_index": None
+            "microphone_index": None,
+            "enable_hotkeys": True,
+            "hotkeys": {
+                "mute_toggle": "m",
+                "ai_mode": "x",
+                "neutral": "1",
+                "disgust": "2",
+                "fear": "3",
+                "happiness": "4",
+                "sadness": "5",
+                "anger": "6"
+            }
         }
         
         self.config_cache = self.load_config()
