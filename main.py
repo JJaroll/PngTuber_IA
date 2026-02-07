@@ -254,7 +254,7 @@ class PNGTuberApp(QMainWindow):
         self.bounce_timer.start(30) # 30 FPS
 
         # 5. Gestor de Fondo (Le pasamos el profile_manager)
-        self.bg_manager = BackgroundManager(self, self.profile_manager)
+        self.bg_manager = BackgroundManager(self, self.profile_manager, self.config_manager)
 
         # 6. Iniciar Hilos
         self.audio_thread = AudioMonitorThread()

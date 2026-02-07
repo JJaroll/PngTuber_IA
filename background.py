@@ -8,10 +8,11 @@ from PyQt6.QtCore import Qt
 from profile_creator import ProfileCreatorDialog
 
 class BackgroundManager:
-    def __init__(self, main_window, profile_manager):
+    def __init__(self, main_window, profile_manager, config_manager): 
         self.main_window = main_window
-        self.central_widget = main_window.central_widget
         self.profile_manager = profile_manager
+        self.config_manager = config_manager  # <--- Guardarlo
+        self.central_widget = main_window.central_widget
 
     def show_context_menu(self, position):
         menu = QMenu(self.main_window)
@@ -135,15 +136,15 @@ class BackgroundManager:
     def change_background(self, color):
         self.main_window.current_background = color
         if color == "transparent":
-            self.main_window.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-            self.central_widget.setStyleSheet("background: transparent;")
+            self.central_widget.setStyleSheet("background-color: transparent;")
         else:
-            self.main_window.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
             self.central_widget.setStyleSheet(f"background-color: {color}; border-radius: 20px; border: 1px solid rgba(0,0,0,50);")
+        self.config_manager.set("background_color", color)
 
     def change_profile(self, profile_name):
         self.profile_manager.set_profile(profile_name)
         self.main_window.update_avatar()
+        self.config_manager.set("current_profile", name)
 
     def open_creator(self):
         dialog = ProfileCreatorDialog(self.main_window)
