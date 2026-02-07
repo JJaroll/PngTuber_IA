@@ -6,7 +6,7 @@ import torch
 from PyQt6.QtCore import QThread, pyqtSignal
 from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtractor
 
-# --- CONFIGURACIÓN DE AUDIO E IA ---
+# --- CONFIGURACIÓN CONSTANTE ---
 CHUNK_SIZE = 1024
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
@@ -21,9 +21,8 @@ EMOTION_MAP = {
 }
 
 class AudioMonitorThread(QThread):
-    """Hilo encargado de escuchar el micrófono y calcular el volumen RMS"""
-    volume_signal = pyqtSignal(bool)       # ¿Está hablando?
-    audio_data_signal = pyqtSignal(np.ndarray) # Datos crudos para la IA
+    volume_signal = pyqtSignal(bool)
+    audio_data_signal = pyqtSignal(np.ndarray)
 
     def __init__(self, device_index=None):
         super().__init__()
@@ -34,10 +33,11 @@ class AudioMonitorThread(QThread):
         self.start_stream()
 
     def start_stream(self):
-        """Inicia o reinicia el stream de audio"""
         if self.stream:
-            self.stream.stop_stream()
-            self.stream.close()
+            try:
+                self.stream.stop_stream()
+                self.stream.close()
+            except: pass
 
         try:
             self.stream = self.p.open(
@@ -49,36 +49,16 @@ class AudioMonitorThread(QThread):
                 frames_per_buffer=CHUNK_SIZE
             )
         except Exception as e:
-            print(f"Error abriendo stream de audio: {e}")
+            print(f"Error abriendo stream: {e}")
+            self.stream = None
 
-    def run(self):
-        try:
-            while self.running:
-                if self.stream and self.stream.is_active():
-                    try:
-                        data = self.stream.read(CHUNK_SIZE, exception_on_overflow=False)
-                        chunk = np.frombuffer(data, dtype=np.float32)
-                        
-                        # Calcular volumen
-                        rms = np.sqrt(np.mean(chunk**2))
-                        self.volume_signal.emit(rms > VOLUME_THRESHOLD)
-                        
-                        # Enviar a la IA
-                        self.audio_data_signal.emit(chunk)
-                    except Exception:
-                        continue
-                else:
-                    time.sleep(0.1)
-        finally:
-            self.cleanup()
-
-    def set_device(self, index):
-        """Cambia el micrófono en caliente"""
+    def change_device(self, index):
+        """Reinicia el stream con el nuevo micrófono"""
         self.device_index = index
         self.start_stream()
 
     def list_devices(self):
-        """Devuelve una lista de (index, nombre) de micrófonos"""
+        """Devuelve la lista de micrófonos para el menú"""
         devices = []
         info = self.p.get_host_api_info_by_index(0)
         num_devices = info.get('deviceCount')
@@ -88,18 +68,26 @@ class AudioMonitorThread(QThread):
                 devices.append((i, name))
         return devices
 
-    def cleanup(self):
-        if self.stream:
-            self.stream.stop_stream()
-            self.stream.close()
-        self.p.terminate()
+    def run(self):
+        while self.running:
+            if self.stream and self.stream.is_active():
+                try:
+                    data = self.stream.read(CHUNK_SIZE, exception_on_overflow=False)
+                    chunk = np.frombuffer(data, dtype=np.float32)
+                    rms = np.sqrt(np.mean(chunk**2))
+                    self.volume_signal.emit(rms > VOLUME_THRESHOLD)
+                    self.audio_data_signal.emit(chunk)
+                except:
+                    continue
+            else:
+                time.sleep(0.1)
 
     def stop(self):
         self.running = False
         self.wait()
+        self.p.terminate()
 
 class EmotionThread(QThread):
-    """Hilo encargado de cargar el modelo IA y predecir emociones"""
     emotion_signal = pyqtSignal(str)
 
     def __init__(self):
@@ -109,18 +97,11 @@ class EmotionThread(QThread):
         self.buffer_lock = threading.Lock()
         self.points = int(RATE * EMOTION_WINDOW_SECONDS)
         
-        # Selección de dispositivo optimizada
-        if torch.backends.mps.is_available(): 
-            self.device = torch.device("mps") # Mac M1/M2/M3
-            print("🚀 Usando Aceleración Apple Metal (MPS)")
-        elif torch.cuda.is_available(): 
-            self.device = torch.device("cuda") # NVIDIA
-            print("🚀 Usando Aceleración CUDA")
-        else: 
-            self.device = torch.device("cpu")
-            print("⚠️ Usando CPU (Más lento)")
+        # Detección automática de aceleración
+        if torch.backends.mps.is_available(): self.device = torch.device("mps")
+        elif torch.cuda.is_available(): self.device = torch.device("cuda")
+        else: self.device = torch.device("cpu")
 
-        # Carga del modelo (Puede tardar un poco)
         try:
             self.feat = Wav2Vec2FeatureExtractor.from_pretrained(MODEL_NAME)
             self.model = Wav2Vec2ForSequenceClassification.from_pretrained(MODEL_NAME).to(self.device)
@@ -131,7 +112,6 @@ class EmotionThread(QThread):
     def add_audio(self, chunk):
         with self.buffer_lock:
             self.audio_buffer = np.concatenate((self.audio_buffer, chunk))
-            # Mantener solo los últimos segundos necesarios
             if len(self.audio_buffer) > self.points * 2:
                 self.audio_buffer = self.audio_buffer[-self.points * 2:]
 
@@ -141,32 +121,24 @@ class EmotionThread(QThread):
             with self.buffer_lock:
                 if len(self.audio_buffer) >= self.points:
                     proc = self.audio_buffer[-self.points:]
-                    self.audio_buffer = np.array([], dtype=np.float32) # Limpiar buffer procesado
+                    self.audio_buffer = np.array([], dtype=np.float32)
             
             if proc is not None: 
                 self.predict(proc)
-            
-            time.sleep(0.1) # No saturar el hilo
+            time.sleep(0.1)
 
     def predict(self, audio):
         try:
-            # Si hay silencio absoluto, no gastar recursos en IA
             if np.sqrt(np.mean(audio**2)) < VOLUME_THRESHOLD:
                 self.emotion_signal.emit("neutral")
                 return
-
-            # Inferencia
             inp = self.feat(audio, sampling_rate=RATE, return_tensors="pt", padding=True).input_values.to(self.device)
             with torch.no_grad(): 
                 logits = self.model(inp).logits
-            
             pid = torch.argmax(logits, dim=-1).item()
             lbl = str(self.model.config.id2label[pid]).lower()
-            
-            # Mapeo a nuestras emociones
             self.emotion_signal.emit(EMOTION_MAP.get(lbl, "neutral"))
-        except Exception as e:
-            print(f"Error predicción: {e}")
+        except: pass
 
     def stop(self):
         self.running = False

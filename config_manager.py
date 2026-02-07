@@ -17,56 +17,34 @@ class ConfigManager(QObject):
             "microphone_index": None
         }
         
-        # 1. Cargar en memoria RAM al iniciar (Lectura Única)
         self.config_cache = self.load_config()
-        
-        # 2. Configurar el Timer de Guardado Diferido (Debounce)
         self.save_timer = QTimer()
         self.save_timer.setSingleShot(True)
-        self.save_timer.setInterval(1000) # Espera 1 segundo antes de escribir en disco
+        self.save_timer.setInterval(1000) # Guardar 1 segundo después del último cambio
         self.save_timer.timeout.connect(self._save_to_disk_actual)
 
     def load_config(self):
-        """Carga el JSON del disco o devuelve los valores por defecto."""
         if not os.path.exists(self.filepath):
             return self.default_config.copy()
-        
         try:
             with open(self.filepath, "r") as f:
                 data = json.load(f)
-                # Asegurar que existan todas las claves por defecto (Merge)
                 for key, value in self.default_config.items():
-                    if key not in data:
-                        data[key] = value
+                    if key not in data: data[key] = value
                 return data
-        except Exception as e:
-            print(f"Error cargando config: {e}")
-            return self.default_config.copy()
+        except: return self.default_config.copy()
 
     def _save_to_disk_actual(self):
-        """Esta función es la que realmente toca el disco duro."""
         try:
             with open(self.filepath, "w") as f:
                 json.dump(self.config_cache, f, indent=4)
-            print("💾 Configuración guardada en disco (Async).")
         except Exception as e:
-            print(f"Error guardando config: {e}")
+            print(f"Error guardando: {e}")
 
     def set(self, key, value):
-        """
-        Actualiza el valor en memoria y reinicia el temporizador de guardado.
-        Si llamas a esto 100 veces en 1 segundo, solo guardará 1 vez al final.
-        """
-        # Si el valor no cambió, no hacemos nada
-        if self.config_cache.get(key) == value:
-            return
-
-        # Actualizar memoria (rápido)
+        if self.config_cache.get(key) == value: return
         self.config_cache[key] = value
-        
-        # Reiniciar el timer (retrasar la escritura en disco)
-        self.save_timer.start()
+        self.save_timer.start() # Reinicia el contador
 
-    def get(self, key):
-        """Obtiene el valor desde la memoria RAM (Instantáneo)."""
-        return self.config_cache.get(key, self.default_config.get(key))
+    def get(self, key, default=None):
+        return self.config_cache.get(key, default if default is not None else self.default_config.get(key))

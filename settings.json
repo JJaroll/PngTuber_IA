@@ -1,10 +1,10 @@
 {
     "current_profile": "Nuevo",
-    "bounce_enabled": false,
-    "bounce_amplitude": 28,
-    "bounce_speed": 0.7,
-    "shadow_enabled": true,
+    "bounce_enabled": true,
+    "bounce_amplitude": 3,
+    "bounce_speed": 0.1,
+    "shadow_enabled": false,
     "is_muted": false,
-    "background_color": "transparent",
+    "background_color": "#0000FE",
     "microphone_index": 1
 }
