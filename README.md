@@ -99,9 +99,9 @@ El código está modularizado para facilitar el mantenimiento:
 ¡Las contribuciones son bienvenidas!
 
 1.  Haz un **Fork** del proyecto.
-2.  Crea una rama (`git checkout -b feature/NuevaCosa`).
+2.  Crea una rama (`git checkout -b feature/NuevaFuncion`).
 3.  Haz tus cambios y commits.
-4.  Haz Push a la rama (`git push origin feature/NuevaCosa`).
+4.  Haz Push a la rama (`git push origin feature/NuevaFuncion`).
 5.  Abre un **Pull Request**.
 
 ## 📄 Licencia
