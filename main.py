@@ -10,7 +10,7 @@ from background import BackgroundManager
 from mac_gui import MacWindowControls
 from config_manager import ConfigManager
 from hotkey_manager import HotkeyManager
-from core_systems import AudioMonitorThread, EmotionThread # <--- Usamos el nuevo módulo
+from core_systems import AudioMonitorThread, EmotionThread
 
 class PNGTuberApp(QMainWindow):
     def __init__(self):
