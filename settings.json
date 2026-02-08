@@ -1,10 +1,10 @@
 {
     "current_profile": "Default",
-    "bounce_enabled": true,
+    "bounce_enabled": false,
     "bounce_amplitude": 10,
     "bounce_speed": 0.3,
-    "shadow_enabled": true,
-    "is_muted": true,
+    "shadow_enabled": false,
+    "is_muted": false,
     "background_color": "#0000FE",
     "microphone_index": null,
     "enable_hotkeys": true,
@@ -17,5 +17,7 @@
         "happiness": "2",
         "sadness": "3",
         "anger": "4"
-    }
+    },
+    "mic_sensitivity": 2.1,
+    "audio_threshold": 0.028
 }

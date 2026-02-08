@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QSizeGrip, QGraphicsDropShadowEffect, QPushButton
+from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QSizeGrip, QGraphicsDropShadowEffect, QPushButton, QSlider, QSizePolicy
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QPixmap, QImage, QPainter, QColor
 
@@ -24,6 +24,8 @@ class PNGTuberApp(QMainWindow):
         self.current_emotion = "neutral"
         self.is_speaking = False
         self.is_muted = self.config.get("is_muted", False)
+        self.mic_sensitivity = self.config.get("mic_sensitivity", 1.0)
+        self.audio_threshold = self.config.get("audio_threshold", 0.02)
         
         # Configuración Visual (Recuperada del JSON)
         self.bounce_enabled = self.config.get("bounce_enabled", True)
@@ -43,7 +45,7 @@ class PNGTuberApp(QMainWindow):
 
         # 4. Sistemas de Audio e IA (Hilos)
         saved_mic = self.config.get("microphone_index")
-        self.audio_thread = AudioMonitorThread(device_index=saved_mic)
+        self.audio_thread = AudioMonitorThread(device_index=saved_mic, threshold=self.audio_threshold, sensitivity=self.mic_sensitivity)
         self.audio_thread.volume_signal.connect(self.update_mouth)
         self.audio_thread.audio_data_signal.connect(self.handle_audio)
         self.audio_thread.start()
@@ -87,12 +89,15 @@ class PNGTuberApp(QMainWindow):
 
         # Avatar
         self.avatar_label = QLabel(self)
-        self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.layout.addWidget(self.avatar_label)
+        self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
+        self.avatar_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
+        self.layout.addWidget(self.avatar_label, 1)
 
         # Botón Mute (Abajo)
         bottom_bar = QHBoxLayout()
         bottom_bar.setContentsMargins(10, 0, 10, 10)
+        
+        # Mute Button
         self.mute_btn = QPushButton("🔊")
         self.mute_btn.setFixedSize(30, 30)
         self.mute_btn.setCheckable(True)
@@ -100,6 +105,42 @@ class PNGTuberApp(QMainWindow):
         self.mute_btn.setStyleSheet("QPushButton { background-color: rgba(255,255,255,200); border-radius: 15px; border: 1px solid #ccc; } QPushButton:checked { background-color: #ff6666; border: 1px solid red; }")
         self.mute_btn.clicked.connect(self.set_muted)
         bottom_bar.addWidget(self.mute_btn)
+
+        # Separador pequeño
+        bottom_bar.addSpacing(10)
+
+        # Botones de Emociones / Hotkeys
+        hotkey_buttons = [
+            ("🤖", "ai_mode", "Modo IA (Automático)"),
+            ("😐", "neutral", "Neutral"),
+            ("😄", "happiness", "Feliz"),
+            ("😠", "anger", "Enojado"),
+            ("😢", "sadness", "Triste")
+        ]
+
+        for icon, action, tooltip in hotkey_buttons:
+            btn = QPushButton(icon)
+            btn.setFixedSize(30, 30)
+            btn.setToolTip(tooltip)
+            btn.setStyleSheet("""
+                QPushButton { 
+                    background-color: rgba(255,255,255,150); 
+                    border-radius: 15px; 
+                    border: 1px solid rgba(0,0,0,50); 
+                    font-size: 14px;
+                } 
+                QPushButton:hover { 
+                    background-color: rgba(255,255,255,230); 
+                    border: 1px solid rgba(0,0,0,100);
+                }
+                QPushButton:pressed {
+                    background-color: rgba(200,200,200,230);
+                }
+            """)
+            # Usamos lambda con default arg para capturar el valor actual de action
+            btn.clicked.connect(lambda _, a=action: self.handle_hotkey(a))
+            bottom_bar.addWidget(btn)
+
         bottom_bar.addStretch()
         self.layout.addLayout(bottom_bar)
 
@@ -136,7 +177,11 @@ class PNGTuberApp(QMainWindow):
             pix = QPixmap(path)
         
         if not pix.isNull():
-            self.avatar_label.setPixmap(pix.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            # Escalar manteniendo aspect ratio dentro de las dimensiones disponibles
+            w = self.avatar_label.width()
+            h = self.avatar_label.height()
+            if w > 0 and h > 0:
+                self.avatar_label.setPixmap(pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
 
     # --- CONECTORES (Señales) ---
     def handle_audio(self, chunk):
@@ -184,6 +229,16 @@ class PNGTuberApp(QMainWindow):
         self.audio_thread.change_device(index)
         self.config_manager.set("microphone_index", index)
 
+    def set_mic_sensitivity(self, value):
+        self.mic_sensitivity = value
+        self.audio_thread.set_sensitivity(value)
+        self.config_manager.set("mic_sensitivity", value)
+
+    def set_audio_threshold(self, value):
+        self.audio_threshold = value
+        self.audio_thread.set_threshold(value)
+        self.config_manager.set("audio_threshold", value)
+
     def set_muted(self, muted):
         self.is_muted = muted
         self.mute_btn.setChecked(muted)
@@ -220,6 +275,7 @@ class PNGTuberApp(QMainWindow):
     def resizeEvent(self, event):
         rect = self.rect()
         self.sizegrip.move(rect.right() - self.sizegrip.width(), rect.bottom() - self.sizegrip.height())
+        self.update_avatar()
         super().resizeEvent(event)
 
     def contextMenuEvent(self, event):

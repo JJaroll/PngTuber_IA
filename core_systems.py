@@ -25,10 +25,12 @@ class AudioMonitorThread(QThread):
     volume_signal = pyqtSignal(bool)
     audio_data_signal = pyqtSignal(np.ndarray)
 
-    def __init__(self, device_index=None):
+    def __init__(self, device_index=None, threshold=VOLUME_THRESHOLD, sensitivity=1.0):
         super().__init__()
         self.running = True
         self.device_index = device_index
+        self.threshold = threshold
+        self.sensitivity = sensitivity
         self.p = pyaudio.PyAudio()
         self.stream = None
         self.start_stream()
@@ -58,6 +60,12 @@ class AudioMonitorThread(QThread):
         self.device_index = index
         self.start_stream()
 
+    def set_sensitivity(self, value):
+        self.sensitivity = value
+
+    def set_threshold(self, value):
+        self.threshold = value
+
     def list_devices(self):
         """Devuelve la lista de micrófonos para el menú"""
         devices = []
@@ -75,8 +83,12 @@ class AudioMonitorThread(QThread):
                 try:
                     data = self.stream.read(CHUNK_SIZE, exception_on_overflow=False)
                     chunk = np.frombuffer(data, dtype=np.float32)
+                    
+                    # Aplicar sensibilidad
+                    chunk = chunk * self.sensitivity
+                    
                     rms = np.sqrt(np.mean(chunk**2))
-                    self.volume_signal.emit(rms > VOLUME_THRESHOLD)
+                    self.volume_signal.emit(rms > self.threshold)
                     self.audio_data_signal.emit(chunk)
                 except:
                     continue

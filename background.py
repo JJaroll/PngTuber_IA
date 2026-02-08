@@ -40,6 +40,11 @@ class BackgroundManager:
             a.triggered.connect(lambda _, i=idx: self.main_window.set_microphone(i))
             mic_menu.addAction(a)
 
+        # --- SUBMENÚ: Ajustes de Audio ---
+        audio_settings_menu = menu.addMenu("🎚️ Ajustes de Audio")
+        self.create_slider_action(audio_settings_menu, "Sensibilidad", 1, 50, self.main_window.mic_sensitivity, self.main_window.set_mic_sensitivity, resolution=10)
+        self.create_slider_action(audio_settings_menu, "Umbral de Audio", 1, 100, self.main_window.audio_threshold, self.main_window.set_audio_threshold, resolution=1000)
+
         menu.addSeparator()
 
         # --- SUBMENÚ: Fondo ---

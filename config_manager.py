@@ -25,7 +25,9 @@ class ConfigManager(QObject):
                 "happiness": "4",
                 "sadness": "5",
                 "anger": "6"
-            }
+            },
+            "mic_sensitivity": 1.0,
+            "audio_threshold": 0.02
         }
         
         self.config_cache = self.load_config()
