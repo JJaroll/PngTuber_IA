@@ -6,7 +6,7 @@ import torch
 from PyQt6.QtCore import QThread, pyqtSignal
 from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtractor
 
-# --- CONFIGURACIÓN CONSTANTE ---
+# --- CONFIGURACIÓN ---
 CHUNK_SIZE = 1024
 FORMAT = pyaudio.paFloat32
 CHANNELS = 1
@@ -15,6 +15,7 @@ VOLUME_THRESHOLD = 0.02
 EMOTION_WINDOW_SECONDS = 2.0
 MODEL_NAME = "somosnlp-hackathon-2022/wav2vec2-base-finetuned-sentiment-classification-MESD"
 
+# --- Mapeo de emociones ---
 EMOTION_MAP = {
     "anger": "angry", "disgust": "angry", "fear": "sad",
     "happiness": "happy", "sadness": "sad", "neutral": "neutral"
@@ -97,7 +98,7 @@ class EmotionThread(QThread):
         self.buffer_lock = threading.Lock()
         self.points = int(RATE * EMOTION_WINDOW_SECONDS)
         
-        # Detección automática de aceleración
+        # Detección automática de método de IA, orden: mps > cuda > cpu
         if torch.backends.mps.is_available(): self.device = torch.device("mps")
         elif torch.cuda.is_available(): self.device = torch.device("cuda")
         else: self.device = torch.device("cpu")

@@ -60,7 +60,6 @@ class PNGTuberApp(QMainWindow):
         self.ai_mode = True
         self.hotkey_manager = HotkeyManager(self.config_manager)
         self.hotkey_manager.hotkey_triggered.connect(self.handle_hotkey)
-        # Retrasamos inicio para evitar conflicto con loop de eventos en macOS
         QTimer.singleShot(1000, self.hotkey_manager.start_listening)
         
         # Estado inicial
@@ -164,22 +163,15 @@ class PNGTuberApp(QMainWindow):
             print("🤖 Modo IA Activado")
         elif action in ["neutral", "happiness", "anger", "sadness", "fear", "disgust"]:
             self.ai_mode = False
-            # Mapeo de teclas a nombres de archivo internos si es necesario
-            # config defaults: neutral, happiness, anger, sadness, fear, disgust
-            # EMOTION_MAP keys: anger, disgust, fear, happiness, sadness, neutral
-            # Internamente usamos: angry, happy, sad, neutral
-            
-            # Mapeo manual para asegurar compatibilidad con archivos
+
             manual_map = {
                 "neutral": "neutral",
                 "happiness": "happy",
                 "anger": "angry", 
                 "sadness": "sad",
-                "fear": "sad", # A veces fear comparte imagen
-                "disgust": "angry" # A veces disgust comparte imagen
+                "fear": "sad", 
+                "disgust": "angry"
             }
-            # O mejor, usamos el nombre directo si coincide con los nombres de archivo que espera profile_manager
-            # profile_manager busca: {emotion}_{state}.PNG
             
             target_emo = manual_map.get(action, "neutral")
             self.current_emotion = target_emo
@@ -187,8 +179,6 @@ class PNGTuberApp(QMainWindow):
             print(f"🛑 Modo Manual: {action} -> {target_emo}")
 
     # --- SETTERS (Aquí conectamos con background.py) ---
-    # ¡ESTAS SON LAS FUNCIONES QUE TU MENÚ NECESITA!
-    
     def set_microphone(self, index):
         print(f"🎤 Cambiando micrófono a ID: {index}")
         self.audio_thread.change_device(index)
@@ -237,7 +227,6 @@ class PNGTuberApp(QMainWindow):
 
     def showEvent(self, event):
         super().showEvent(event)
-        # Fix macOS transparencia
         QTimer.singleShot(100, lambda: self.resize(self.width() + 1, self.height()))
         QTimer.singleShot(200, lambda: self.resize(self.width() - 1, self.height()))
 

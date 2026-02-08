@@ -113,18 +113,13 @@ class BackgroundManager:
 
         menu.exec(self.main_window.mapToGlobal(position))
 
-    # --- LÓGICA CORREGIDA ---
+    # --- LÓGICA DEL COLOR DEL FONDO ---
     def change_background(self, color):
         self.main_window.current_background = color
         
-        # NOTA: Ya no tocamos self.main_window.setAttribute(WA_TranslucentBackground)
-        # Asumimos que la ventana SIEMPRE es translúcida (definido en main.py)
-        
-        if color == "transparent":
-            # Pintamos el widget "invisible"
+        if color == "transparent":#se pone transparente el widget
             self.central_widget.setStyleSheet("background: transparent;")
-        else:
-            # Pintamos el widget del color deseado (encima de lo transparente)
+        else:#se pone el color deseado
             self.central_widget.setStyleSheet(f"background-color: {color}; border-radius: 20px; border: 1px solid rgba(0,0,0,50);")
             
         self.config_manager.set("background_color", color)

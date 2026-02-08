@@ -95,7 +95,6 @@ class ProfileCreatorDialog(QDialog):
         if os.path.exists(target_dir):
             return QMessageBox.warning(self, "Error", "Ya existe un skin con ese nombre.")
 
-        # Validación mínima (Neutral es obligatorio)
         if "neutral_closed" not in self.selected_files or "neutral_open" not in self.selected_files:
             return QMessageBox.warning(self, "Incompleto", "Debes cargar al menos las imágenes 'Neutral' (Abierta y Cerrada).")
 
@@ -140,7 +139,7 @@ class ProfileCreatorDialog(QDialog):
             meta = {
                 "name": name,
                 "version": "1.0",
-                "author": "Usuario" # Podríamos pedirlo, pero simplificamos
+                "author": "Usuario" 
             }
             meta_path = os.path.join(source_dir, "meta.json")
             with open(meta_path, "w") as f:

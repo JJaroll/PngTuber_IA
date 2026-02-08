@@ -10,7 +10,7 @@ class MacCircleButton(QPushButton):
         self.border_color = QColor(border_hex)
         self.symbol = symbol
         
-        # Cursor de flecha normal para mayor realismo
+        # Cursor de flecha normal
         self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def paintEvent(self, event):
@@ -36,10 +36,9 @@ class MacCircleButton(QPushButton):
             if self.symbol == "✕": # Cerrar
                 painter.drawText(QRect(0, 0, 12, 11), Qt.AlignmentFlag.AlignCenter, self.symbol)
             elif self.symbol == "−": # Minimizar
-                # Ajuste vertical para el signo menos
                 painter.drawText(QRect(0, -1, 12, 11), Qt.AlignmentFlag.AlignCenter, self.symbol)
             elif self.symbol == "+": # Maximizar
-                 painter.drawText(QRect(0, 0, 12, 12), Qt.AlignmentFlag.AlignCenter, self.symbol)
+                painter.drawText(QRect(0, 0, 12, 12), Qt.AlignmentFlag.AlignCenter, self.symbol)
 
         painter.end()
 

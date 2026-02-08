@@ -131,11 +131,7 @@ class HotkeyConfigDialog(QDialog):
         self.table.setCellWidget(row, 2, btn)
 
     def record_key(self, action):
-        # NOTA: Ya no necesitamos detener el subprocess manager global
-        # porque corre en otro proceso y no interfiere con el evento de Qt local.
-        # Pero si la tecla presionada es un hotkey global, se ejecutará la acción
-        # mientras grabamos. Podríamos pausarlo si quisiéramos, pero no es crítico.
-        
+        # Si la tecla presionada es un hotkey global, se ejecutará la acción mientras grabamos
         dialog = HotkeyRecorderDialog(self)
         if dialog.exec():
             new_key = dialog.key_result

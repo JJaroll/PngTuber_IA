@@ -1,5 +1,4 @@
 from PyQt6.QtCore import QObject, pyqtSignal, QTimer
-# NO IMPORTAMOS pynput AQUÍ para evitar conflictos en el proceso principal
 import multiprocessing
 from hotkey_process import run_hotkey_listener
 
@@ -15,7 +14,7 @@ class HotkeyManager(QObject):
         self.timer.timeout.connect(self.check_queue)
         
         # Mapeo invertido para la UI: action -> key
-        # Pero para el proceso necesitamos key -> action
+        # Para el proceso necesitamos key -> action
         self.mapping = {}
         self.reverse_mapping = {} # key_str -> action (lo que enviamos al proceso)
         self.reload_mapping()

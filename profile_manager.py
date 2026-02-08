@@ -39,11 +39,8 @@ class AvatarProfileManager:
 
     def get_image_path(self, emotion, state):
         """Devuelve la ruta exacta de la imagen según el perfil activo"""
-        # Estructura esperada: avatars/NombrePerfil/emocion_estado.PNG
         filename = f"{emotion}_{state}.PNG"
         return os.path.join(self.root_folder, self.current_profile, filename)
-
-# --- CÓDIGO FALTANTE PARA EXPORTAR/IMPORTAR ---
 
     def export_skin_package(self, profile_name, target_file_path):
         """Empaqueta la carpeta del perfil en un archivo .ptuber (ZIP)"""
@@ -60,7 +57,7 @@ class AvatarProfileManager:
                         # Solo guardamos PNGs para evitar archivos basura
                         if file.lower().endswith(".png"):
                             file_path = os.path.join(root, file)
-                            # Guardamos el archivo plano en el zip (sin carpetas extrañas)
+                            # Guardamos el archivo plano en el zip 
                             zipf.write(file_path, arcname=file)
             return True, "Skin exportado exitosamente."
         except Exception as e:

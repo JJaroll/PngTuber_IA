@@ -4,13 +4,6 @@ from pynput import keyboard
 from pynput.keyboard import Key, KeyCode
 
 def run_hotkey_listener(queue, mapping):
-    """
-    Función que se ejecuta en un proceso separado.
-    queue: multiprocessing.Queue para enviar acciones al proceso principal.
-    mapping: dict con mapeo de teclas {key_str: action_name}
-    """
-    
-    # Reconstruir el mapeo a objetos pynput
     # El mapping llega como diccionario de strings: {"m": "mute_toggle", "f1": "action"}
     # key_str puede ser un char o un nombre de tecla especial.
     
