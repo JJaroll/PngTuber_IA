@@ -32,7 +32,7 @@ Ideal para streamers, creadores de contenido o simplemente para divertirse en Di
 ### Pasos
 1.  **Clonar el repositorio:**
     ```bash
-    git clone https://github.com/JJaroll/pngtuber-ia.git
+    git clone https://github.com/JJaroll/PngTuber_IA.git
     cd pngtuber-ia
     ```
 
