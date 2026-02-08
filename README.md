@@ -16,11 +16,12 @@ Ideal para streamers, creadores de contenido o simplemente para divertirse en Di
 * **🎨 Sistema de Skins (.ptuber):**
     * Crea tus propios avatares con el **Creador Integrado**.
     * Importa y exporta skins fácilmente para compartir con amigos.
-* **⚙️ Configuración Persistente:** Guarda automáticamente tu micrófono preferido, sensibilidad, skin y colores.
-* **🖥️ Interfaz Moderna:**
-    * Ventana sin bordes (Frameless).
-    * Fondo transparente real (compatible con macOS y Windows).
-    * Controles estilo Mac.
+*   **⚙️ Configuración Persistente:** Guarda automáticamente tu micrófono preferido, sensibilidad, skin y colores.
+*   **🎹 Atajos Rápidos:** Botones en pantalla para cambiar emociones o volver al modo IA.
+*   **🖥️ Interfaz Moderna:**
+    *   Ventana sin bordes (Frameless).
+    *   Fondo transparente real (compatible con macOS y Windows).
+    *   Controles estilo Mac.
 
 ## 🛠️ Instalación
 
@@ -69,19 +70,26 @@ python main.py
 
 ## 🎨 Controles
 
-* **Clic Izquierdo + Arrastrar:** Mover al personaje por la pantalla.
-* **Clic Derecho:** Abrir el Menú Contextual.
-* **Esquina Inferior Derecha:** Redimensionar al personaje.
+*   **Clic Izquierdo + Arrastrar:** Mover al personaje por la pantalla.
+*   **Clic Derecho:** Abrir el Menú Contextual (Ajustes avanzados).
+*   **Esquina Inferior Derecha:** Redimensionar al personaje.
+*   **Botones Inferiores:**
+    *   🔊: Silenciar/Activar micrófono.
+    *   🤖: Activar **Modo IA** (Automático).
+    *   😐, 😄, 😠, 😢: Forzar una emoción (Modo Manual).
 
 ### Menú Contextual (Clic Derecho)
 Desde aquí puedes controlar todo:
 
-* **🎨 Fondo:** Cambiar entre Transparente (para OBS/Desktop) o Verde/Azul (Chroma Key).
-* **👕 Skins:** Cambiar de avatar, crear uno nuevo o importar/exportar.
-* **⚙️ Configuración:**
-    * Seleccionar Micrófono.
-    * Activar/Desactivar Rebote y Sombra.
-    * Ajustar sensibilidad del rebote.
+*   **🎚️ Ajustes de Audio:**
+    *   **Sensibilidad:** Aumenta si el avatar no te escucha bien.
+    *   **Umbral:** Aumenta si el avatar se mueve con el ruido de fondo.
+*   **🎨 Fondo:** Cambiar entre Transparente (para OBS/Desktop) o Verde/Azul (Chroma Key).
+*   **👕 Skins:** Cambiar de avatar, crear uno nuevo o importar/exportar.
+*   **⚙️ Otras Opciones:**
+    *   Seleccionar Micrófono.
+    *   Activar/Desactivar Rebote y Sombra.
+    *   Ajustar intensidad del rebote.
 
 ## 📁 Estructura del Proyecto
 
@@ -91,8 +99,9 @@ El código está modularizado para facilitar el mantenimiento:
 * **core_systems.py:** El Cerebro. Contiene los hilos de Audio (PyAudio) y de IA (Transformers).
 * **background.py:** Gestiona el menú contextual y las opciones visuales.
 * **profile_manager.py:** Lógica para guardar, cargar, importar y exportar skins (.ptuber).
-* **config_manager.py:** Sistema de guardado de preferencias (settings.json).
-* **mac_gui.py:** Botones personalizados de la ventana.
+*   **config_manager.py:** Sistema de guardado de preferencias (settings.json).
+*   **mac_gui.py:** Botones personalizados de la ventana.
+*   **hotkey_manager.py:** Gestión de atajos de teclado globales.
 
 ## 🤝 Contribuir
 
