@@ -1,8 +1,86 @@
 import sys
+import json
+import urllib.request
 import numpy as np
-from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QSizeGrip, QGraphicsDropShadowEffect, QPushButton, QSlider, QSizePolicy
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QPixmap, QImage, QPainter, QColor
+from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QSizeGrip, QGraphicsDropShadowEffect, QPushButton, QSlider, QSizePolicy, QProgressBar, QMessageBox
+from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QUrl, QPoint
+from PyQt6.QtGui import QPixmap, QImage, QPainter, QColor, QTransform, QShortcut, QKeySequence, QDesktopServices, QPen, QFont
+
+CURRENT_VERSION = "1.0.0"
+UPDATE_URL = "https://pastebin.com/raw/kPjwkJu2" # Placeholder
+
+class UpdateChecker(QThread):
+    update_available = pyqtSignal(str)
+
+    def run(self):
+        try:
+            req = urllib.request.Request(
+                UPDATE_URL, 
+                headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36'}
+            )
+            with urllib.request.urlopen(req) as response:
+                data = json.loads(response.read().decode())
+                remote_version = data.get("version", "0.0.0")
+                download_url = data.get("url", "")
+                
+                print(f"[DEBUG] Check Update: {CURRENT_VERSION} vs {remote_version}")
+
+                # Simple version comparison (assumes X.Y.Z format)
+                if remote_version > CURRENT_VERSION:
+                    print(f"[DEBUG] Update found: {download_url}")
+                    self.update_available.emit(download_url)
+                else:
+                    print("[DEBUG] No update found.")
+
+        except Exception as e:
+            print(f"[ERROR] Update check failed: {e}")
+
+class TutorialOverlay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setGeometry(parent.rect())
+        self.setVisible(False)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Fondo semitransparente
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 150))
+        
+        # Configuración de Texto y Líneas
+        pen = QPen(Qt.GlobalColor.white)
+        pen.setWidth(2)
+        painter.setPen(pen)
+        
+        font_title = QFont("Arial", 16, QFont.Weight.Bold)
+        painter.setFont(font_title)
+        
+        rect = self.rect()
+        center = rect.center()
+        
+        # 1. Flip & Menu (Centro)
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Flip: Ctrl+F\nClick derecho: Menú")
+        
+        # 2. Volumen (Abajo, aprox)
+        # Asumimos que la barra de volumen está en los últimos 20px
+        start_arrow = QPoint(center.x(), rect.bottom() - 60)
+        end_arrow = QPoint(center.x(), rect.bottom() - 20)
+        painter.drawLine(start_arrow, end_arrow)
+        
+        painter.setFont(QFont("Arial", 12))
+        painter.drawText(start_arrow.x() - 60, start_arrow.y() - 5, "Barra de Volumen")
+        
+        # 3. Mensaje de cierre
+        painter.setFont(QFont("Arial", 10, QFont.Weight.Normal))
+        painter.drawText(rect.adjusted(0, 0, 0, -50), Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter, "Haz clic para comenzar")
+
+    def mousePressEvent(self, event):
+        if self.parent_window:
+            self.parent_window.mark_tutorial_completed()
+        self.close()
+        self.deleteLater()
 
 # Imports Locales
 from profile_manager import AvatarProfileManager
@@ -34,6 +112,7 @@ class PNGTuberApp(QMainWindow):
         self.bounce_phase = 0
         self.shadow_enabled = self.config.get("shadow_enabled", True)
         self.current_background = self.config.get("background_color", "transparent")
+        self.is_flipped = False
 
         # 2. Iniciar Gestores
         self.profile_manager = AvatarProfileManager()
@@ -54,6 +133,13 @@ class PNGTuberApp(QMainWindow):
         self.emotion_thread.emotion_signal.connect(self.update_emotion)
         self.emotion_thread.start()
 
+
+
+        # 5. Update Checker
+        self.update_checker = UpdateChecker()
+        self.update_checker.update_available.connect(self.show_update_dialog)
+        self.update_checker.start()
+
         self.bounce_timer = QTimer()
         self.bounce_timer.timeout.connect(self.animate_bounce)
         self.bounce_timer.start(30)
@@ -66,6 +152,14 @@ class PNGTuberApp(QMainWindow):
         
         # Estado inicial
         self.update_avatar()
+
+        # Shortcuts
+        self.flip_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
+        self.flip_shortcut.activated.connect(self.toggle_flip)
+
+        # 7. Tutorial (Onboarding)
+        if not self.config.get("tutorial_completed", False):
+            QTimer.singleShot(500, self.show_tutorial)
 
     def init_ui(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
@@ -142,6 +236,24 @@ class PNGTuberApp(QMainWindow):
             bottom_bar.addWidget(btn)
 
         bottom_bar.addStretch()
+
+        # Barra de Volumen Visual
+        self.volume_bar = QProgressBar()
+        self.volume_bar.setRange(0, 100)
+        self.volume_bar.setTextVisible(False)
+        self.volume_bar.setFixedHeight(8)  # Delgada
+        self.volume_bar.setStyleSheet("""
+            QProgressBar {
+                background-color: #333333;
+                border: 1px solid #555555;
+                border-radius: 4px;
+            }
+            QProgressBar::chunk {
+                background-color: #00FF00;
+                border-radius: 4px; 
+            }
+        """)
+        bottom_bar.addWidget(self.volume_bar)
         self.layout.addLayout(bottom_bar)
 
         # Efectos (Sombra y Resize)
@@ -157,6 +269,11 @@ class PNGTuberApp(QMainWindow):
         # Gestor de Fondo (Menú Contextual)
         self.bg_manager = BackgroundManager(self, self.profile_manager, self.config_manager)
         self.bg_manager.change_background(self.current_background)
+
+    # --- LÓGICA DE FLIP ---
+    def toggle_flip(self):
+        self.is_flipped = not self.is_flipped
+        self.update_avatar()
 
     # --- LÓGICA DE ANIMACIÓN ---
     def animate_bounce(self):
@@ -177,6 +294,10 @@ class PNGTuberApp(QMainWindow):
             pix = QPixmap(path)
         
         if not pix.isNull():
+            # Aplicar Flip si es necesario
+            if self.is_flipped:
+                pix = pix.transformed(QTransform().scale(-1, 1))
+
             # Escalar manteniendo aspect ratio dentro de las dimensiones disponibles
             w = self.avatar_label.width()
             h = self.avatar_label.height()
@@ -187,6 +308,17 @@ class PNGTuberApp(QMainWindow):
     def handle_audio(self, chunk):
         if not self.is_muted:
             self.emotion_thread.add_audio(chunk)
+            
+            # Calcular nivel de volumen para la barra visual de manera simple con numpy
+            try:
+                rms = np.sqrt(np.mean(chunk**2))
+                # Multiplicamos para que sea visible (ajustar factor según micrófono/necesidad)
+                level = int(rms * 500) 
+                self.volume_bar.setValue(min(100, level))
+            except:
+                pass
+        else:
+            self.volume_bar.setValue(0)
 
     def update_mouth(self, speaking):
         if self.is_muted: speaking = False
@@ -276,6 +408,11 @@ class PNGTuberApp(QMainWindow):
         rect = self.rect()
         self.sizegrip.move(rect.right() - self.sizegrip.width(), rect.bottom() - self.sizegrip.height())
         self.update_avatar()
+        
+        # Actualizar overlay si existe
+        if hasattr(self, 'tutorial') and self.tutorial and self.tutorial.isVisible():
+             self.tutorial.setGeometry(rect)
+             
         super().resizeEvent(event)
 
     def contextMenuEvent(self, event):
@@ -301,6 +438,25 @@ class PNGTuberApp(QMainWindow):
         if event.buttons() == Qt.MouseButton.LeftButton:
             self.move(event.globalPosition().toPoint() - self.drag_pos)
             event.accept()
+
+    def show_update_dialog(self, url):
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Actualización Disponible")
+        msg.setText("¡Hay una nueva versión de PNGTuber disponible!")
+        msg.setInformativeText("¿Deseas descargarla ahora?")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.Yes)
+        
+        if msg.exec() == QMessageBox.StandardButton.Yes:
+            QDesktopServices.openUrl(QUrl(url))
+
+    def show_tutorial(self):
+        self.tutorial = TutorialOverlay(self)
+        self.tutorial.show()
+
+    def mark_tutorial_completed(self):
+        print("✅ Tutorial completado")
+        self.config_manager.set("tutorial_completed", True)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

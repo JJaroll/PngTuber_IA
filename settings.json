@@ -18,6 +18,7 @@
         "sadness": "3",
         "anger": "4"
     },
-    "mic_sensitivity": 2.1,
-    "audio_threshold": 0.028
+    "mic_sensitivity": 2.3,
+    "audio_threshold": 0.028,
+    "tutorial_completed": true
 }
