@@ -116,6 +116,15 @@ class BackgroundManager:
         if dialog.exec():
             self.profile_manager.scan_profiles()
 
+    def open_editor(self, profile_name):
+        from profile_creator import ProfileCreatorDialog
+        dialog = ProfileCreatorDialog(self.main_window, edit_profile_name=profile_name)
+        if dialog.exec():
+            self.profile_manager.scan_profiles()
+            # Si estamos editando el perfil actual, forzar actualización visual
+            if self.profile_manager.current_profile == profile_name:
+                self.main_window.update_avatar()
+
     def open_hotkey_config(self):
         # Esta función ya no se usa desde el menú, pero si settings_window la llamara (aunque ahora tiene su propia pestaña)
         # la dejamos por compatibilidad o la podemos borrar si settings_window ya no la usa.

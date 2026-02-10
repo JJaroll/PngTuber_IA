@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QTableWidget, QTableWidgetItem, QHeaderView, 
                              QMenu, QInputDialog, QMessageBox, QColorDialog)
 from PyQt6.QtGui import QAction, QFont, QDesktopServices
-from PyQt6.QtCore import Qt, QSize, pyqtSignal, QUrl
+from PyQt6.QtCore import Qt, QSize, pyqtSignal, QUrl, QTimer
 from PyQt6.QtGui import QPixmap, QIcon, QColor, QPainter, QPainterPath
 
 from ui_components import PillProgressBar
@@ -19,6 +19,7 @@ from hotkey_gui import HotkeyRecorderDialog
 class AvatarCard(QFrame):
     clicked = pyqtSignal(str) 
     rename_requested = pyqtSignal(str)
+    edit_requested = pyqtSignal(str)
     delete_requested = pyqtSignal(str)
 
     def __init__(self, name, image_path, is_active, parent=None):
@@ -84,6 +85,10 @@ class AvatarCard(QFrame):
         rename_action = QAction("✏️ Cambiar Nombre", self)
         rename_action.triggered.connect(lambda: self.rename_requested.emit(self.name))
         menu.addAction(rename_action)
+
+        edit_action = QAction("🖼️ Editar Imágenes", self)
+        edit_action.triggered.connect(lambda: self.edit_requested.emit(self.name))
+        menu.addAction(edit_action)
 
         if self.name != "Default":
             menu.addSeparator()
@@ -400,7 +405,9 @@ class SettingsDialog(QDialog):
         current_profile = self.main_window.profile_manager.current_profile
         root_folder = self.main_window.profile_manager.root_folder
 
-        count = len(profiles)
+        # Excluir 'Default' del conteo visual
+        user_skins = [p for p in profiles if p != "Default"]
+        count = len(user_skins)
         limit = 12
         if count >= limit:
             self.btn_create.setEnabled(False)
@@ -435,6 +442,7 @@ class SettingsDialog(QDialog):
             card = AvatarCard(profile, image_path, is_active)
             card.clicked.connect(self.on_avatar_selected)
             card.rename_requested.connect(self.rename_avatar)
+            card.edit_requested.connect(self.edit_avatar)
             card.delete_requested.connect(self.delete_avatar)
             
             self.avatar_grid.addWidget(card, row, col)
@@ -446,6 +454,11 @@ class SettingsDialog(QDialog):
 
     def on_avatar_selected(self, profile_name):
         self.bg_manager.change_profile(profile_name)
+        # Usamos QTimer para evitar eliminar el widget que envió la señal mientras procesa el evento
+        QTimer.singleShot(0, self.refresh_avatar_grid)
+    
+    def edit_avatar(self, profile_name):
+        self.bg_manager.open_editor(profile_name)
         self.refresh_avatar_grid()
     
     def rename_avatar(self, old_name):

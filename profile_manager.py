@@ -70,35 +70,42 @@ class AvatarProfileManager:
 
     def get_image_path(self, emotion, state):
         """Busca la mejor imagen disponible. Si falta una, usa un reemplazo."""
+        
+        # Función auxiliar para verificar si es archivo real
+        def is_valid_file(path):
+            return os.path.exists(path) and os.path.isfile(path)
+
         # 1. Intento exacto (Ej: happy_open.PNG)
         filename = f"{emotion}_{state}.PNG"
         full_path = os.path.join(self.root_folder, self.current_profile, filename)
-        if os.path.exists(full_path): return full_path
+        if is_valid_file(full_path): return full_path
             
         # 2. Intento mismo emoción, estado opuesto (Ej: happy_closed.PNG)
         opp_state = "closed" if state == "open" else "open"
         filename = f"{emotion}_{opp_state}.PNG"
         full_path = os.path.join(self.root_folder, self.current_profile, filename)
-        if os.path.exists(full_path): return full_path
+        if is_valid_file(full_path): return full_path
 
         # 3. Intento neutral (Ej: neutral_open.PNG)
         filename = f"neutral_{state}.PNG"
         full_path = os.path.join(self.root_folder, self.current_profile, filename)
-        if os.path.exists(full_path): return full_path
+        if is_valid_file(full_path): return full_path
 
         # 4. Intento neutral base (Ej: neutral_closed.PNG)
         filename = "neutral_closed.PNG"
         full_path = os.path.join(self.root_folder, self.current_profile, filename)
-        if os.path.exists(full_path): return full_path
+        if is_valid_file(full_path): return full_path
             
-        # 5. Desesperación: Devolver CUALQUIER png que encuentre en la carpeta
+        # 5. Desesperación: Devolver CUALQUIER png real que encuentre
         skin_dir = os.path.join(self.root_folder, self.current_profile)
         if os.path.exists(skin_dir):
             for f in os.listdir(skin_dir):
                 if f.lower().endswith(".png"):
-                    return os.path.join(skin_dir, f)
+                    candidate = os.path.join(skin_dir, f)
+                    if os.path.isfile(candidate): # Verificación extra
+                        return candidate
         
-        # 6. Si la carpeta está vacía, retornamos None para que main.py genere un error visual
+        # 6. Nada encontrado
         return None
 
     def export_skin_package(self, profile_name, target_file_path):
@@ -119,8 +126,10 @@ class AvatarProfileManager:
 
     def import_skin_package(self, source_file_path):
         self.scan_profiles()
-        if len(self.profiles) >= 12:
-            return False, "Límite de 12 skins alcanzado."
+        # Excluir 'Default' del conteo
+        user_skins = [p for p in self.profiles if p != "Default"]
+        if len(user_skins) >= 12:
+            return False, "Límite de 12 skins alcanzado (sin contar Default)."
 
         try:
             skin_name = os.path.splitext(os.path.basename(source_file_path))[0]

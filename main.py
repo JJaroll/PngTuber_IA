@@ -413,45 +413,52 @@ class PNGTuberApp(QMainWindow):
             self.avatar_label.setContentsMargins(0, 0, 0, 0)
 
     def update_avatar(self):
-        state = "open" if self.is_speaking else "closed"
-        
-        # Obtenemos la ruta inteligente (intenta buscar reemplazos si falta el archivo exacto)
-        path = self.profile_manager.get_image_path(self.current_emotion, state)
-        
-        pix = None
-        if path:
-            pix = QPixmap(path)
-        
-        # --- PROTECCIÓN FINAL: GENERACIÓN EN MEMORIA ---
-        # Si no hay imagen (carpeta vacía o error de carga), creamos un aviso visual
-        if not pix or pix.isNull():
-            pix = QPixmap(200, 200)
-            pix.fill(QColor("transparent"))
-            painter = QPainter(pix)
+        try:
+            state = "open" if self.is_speaking else "closed"
             
-            # Dibujar un círculo rojo semitransparente con un signo de interrogación
-            painter.setBrush(QBrush(QColor(255, 50, 50, 150))) # Rojo
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(10, 10, 180, 180)
+            # Intentar obtener la ruta de la imagen
+            path = None
+            if hasattr(self, 'profile_manager'):
+                path = self.profile_manager.get_image_path(self.current_emotion, state)
             
-            # Texto "?"
-            painter.setPen(QPen(QColor("white")))
-            font = QFont("Arial", 40, QFont.Weight.Bold)
-            painter.setFont(font)
-            painter.drawText(pix.rect(), Qt.AlignmentFlag.AlignCenter, "?")
-            painter.end()
-        # -----------------------------------------------
+            pix = None
+            if path and isinstance(path, str):
+                pix = QPixmap(path)
+            
+            # --- PROTECCIÓN FINAL: GENERACIÓN EN MEMORIA ---
+            # Si no hay imagen válida, generamos el aviso visual
+            if not pix or pix.isNull():
+                pix = QPixmap(200, 200)
+                pix.fill(QColor("transparent"))
+                painter = QPainter(pix)
+                
+                # Círculo rojo semitransparente de error
+                painter.setBrush(QBrush(QColor(255, 50, 50, 150)))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawEllipse(10, 10, 180, 180)
+                
+                # Signo de interrogación
+                painter.setPen(QPen(QColor("white")))
+                font = QFont("Arial", 40, QFont.Weight.Bold)
+                painter.setFont(font)
+                painter.drawText(pix.rect(), Qt.AlignmentFlag.AlignCenter, "?")
+                painter.end()
+            # -----------------------------------------------
 
-        # Aplicar espejo si es necesario
-        if self.is_flipped:
-            pix = pix.transformed(QTransform().scale(-1, 1))
+            # Aplicar espejo si es necesario
+            if self.is_flipped:
+                pix = pix.transformed(QTransform().scale(-1, 1))
 
-        # Mostrar en la etiqueta
-        w = self.avatar_label.width()
-        h = self.avatar_label.height()
-        if w > 0 and h > 0:
-            self.avatar_label.setPixmap(pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-
+            # Mostrar en la etiqueta de forma segura
+            w = self.avatar_label.width()
+            h = self.avatar_label.height()
+            if w > 0 and h > 0:
+                self.avatar_label.setPixmap(pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                
+        except Exception as e:
+            print(f"⚠️ Error controlado en update_avatar: {e}")
+            # No hacemos nada más, así la app sigue viva
+   
     # --- SEÑALES ---
     def handle_audio(self, chunk):
         if not self.is_muted:
