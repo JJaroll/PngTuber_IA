@@ -1,8 +1,8 @@
 {
     "current_profile": "Nuevo",
-    "bounce_enabled": false,
-    "bounce_amplitude": 24,
-    "bounce_speed": 0.7,
+    "bounce_enabled": true,
+    "bounce_amplitude": 6,
+    "bounce_speed": 0.4,
     "shadow_enabled": true,
     "is_muted": false,
     "background_color": "#0000FE",
@@ -18,7 +18,7 @@
         "sadness": "3",
         "anger": "4"
     },
-    "mic_sensitivity": 2.5,
+    "mic_sensitivity": 1.6,
     "audio_threshold": 0.028,
     "tutorial_completed": true
 }

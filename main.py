@@ -134,6 +134,11 @@ class PNGTuberApp(QMainWindow):
         self.update_checker = UpdateChecker()   
         self.update_checker.update_available.connect(self.on_update_found) 
         self.update_checker.start()
+
+        #Rebote
+        self.bounce_timer = QTimer()
+        self.bounce_timer.timeout.connect(self.animate_bounce)
+        self.bounce_timer.start(30)
  
         # 6. Gestor de Hotkeys
         self.ai_mode = True

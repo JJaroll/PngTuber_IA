@@ -102,7 +102,7 @@ class SettingsDialog(QDialog):
         self.bg_manager = main_window.bg_manager
         
         self.setWindowTitle("Configuración - PNGTuber IA")
-        self.resize(700, 600) # Un poco más grande para las nuevas pestañas
+        self.resize(700, 600)
         
         self.setStyleSheet("""
             QDialog { background-color: #1e1e1e; color: white; }
@@ -134,8 +134,8 @@ class SettingsDialog(QDialog):
         self.tabs.addTab(self.create_visual_tab(), "🎨 Apariencia")
         self.tabs.addTab(self.create_avatar_tab(), "👕 Avatar")
         self.tabs.addTab(self.create_hotkeys_tab(), "⌨️ Atajos")
-        self.tabs.addTab(self.create_system_tab(), "💻 Sistema") # NUEVA
-        self.tabs.addTab(self.create_about_tab(), "ℹ️ Sobre")   # NUEVA
+        self.tabs.addTab(self.create_system_tab(), "💻 Sistema")
+        self.tabs.addTab(self.create_about_tab(), "ℹ️ Sobre")
 
         close_btn = QPushButton("Cerrar")
         close_btn.setStyleSheet("background-color: #007ACC; border: none;")
@@ -171,6 +171,67 @@ class SettingsDialog(QDialog):
                     self.audio_test_bar.set_color_hex(new_color)
                     self.last_color_hex = new_color
         except: pass
+
+    # ==========================================
+    # 🆕 PESTAÑA: AUDIO (CORREGIDA ALINEACIÓN)
+    # ==========================================
+    def create_audio_tab(self):
+        tab = QWidget()
+        layout = QFormLayout(tab)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
+
+        self.mic_combo = QComboBox()
+        devices = self.main_window.audio_thread.list_devices()
+        current_idx = self.main_window.audio_thread.device_index
+        idx_map = {}
+        for i, (dev_idx, name) in enumerate(devices):
+            self.mic_combo.addItem(f"{name[:35]}...", dev_idx)
+            idx_map[dev_idx] = i 
+        if current_idx in idx_map:
+            self.mic_combo.setCurrentIndex(idx_map[current_idx])
+        self.mic_combo.currentIndexChanged.connect(self.on_mic_changed)
+        layout.addRow("Dispositivo:", self.mic_combo)
+
+        self.sens_slider = QSlider(Qt.Orientation.Horizontal)
+        self.sens_slider.setRange(1, 50) 
+        self.sens_slider.setValue(int(self.main_window.mic_sensitivity * 10))
+        self.sens_label = QLabel(f"{self.main_window.mic_sensitivity:.1f}")
+        self.sens_slider.valueChanged.connect(lambda v: self.on_sensitivity(v))
+        sens_layout = QHBoxLayout()
+        sens_layout.addWidget(self.sens_slider)
+        sens_layout.addWidget(self.sens_label)
+        layout.addRow("Sensibilidad:", sens_layout)
+
+        self.thres_slider = QSlider(Qt.Orientation.Horizontal)
+        self.thres_slider.setRange(1, 100) 
+        self.thres_slider.setValue(int(self.main_window.audio_threshold * 1000))
+        self.thres_label = QLabel(f"{self.main_window.audio_threshold:.3f}")
+        self.thres_slider.valueChanged.connect(lambda v: self.on_threshold(v))
+        thres_layout = QHBoxLayout()
+        thres_layout.addWidget(self.thres_slider)
+        thres_layout.addWidget(self.thres_label)
+        layout.addRow("Umbral:", thres_layout)
+        
+        layout.addRow(QLabel(" "))
+        
+        # --- CORRECCIÓN ---
+        lbl_test = QLabel("Prueba de Audio:")
+        # 1. ELIMINAMOS 'margin-top: 10px'
+        lbl_test.setStyleSheet("font-weight: bold;") 
+        
+        self.audio_test_bar = PillProgressBar()
+        
+        # 2. USAMOS UN CONTENEDOR PARA CENTRAR VERTICALMENTE
+        bar_container = QWidget()
+        bar_layout = QHBoxLayout(bar_container)
+        bar_layout.setContentsMargins(0, 0, 0, 0)
+        bar_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter) # Esto hace la magia
+        bar_layout.addWidget(self.audio_test_bar)
+        
+        layout.addRow(lbl_test, bar_container)
+        
+        return tab
 
     # ==========================================
     # 🆕 PESTAÑA: DETALLES DEL SISTEMA
