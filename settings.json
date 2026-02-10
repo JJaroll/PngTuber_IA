@@ -1,11 +1,11 @@
 {
-    "current_profile": "Nuevo",
+    "current_profile": "Default",
     "bounce_enabled": true,
     "bounce_amplitude": 6,
     "bounce_speed": 0.4,
     "shadow_enabled": true,
     "is_muted": false,
-    "background_color": "#0000FE",
+    "background_color": "rgba(255, 110, 88, 255)",
     "microphone_index": 1,
     "enable_hotkeys": true,
     "hotkeys": {

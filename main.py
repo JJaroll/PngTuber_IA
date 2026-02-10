@@ -414,20 +414,43 @@ class PNGTuberApp(QMainWindow):
 
     def update_avatar(self):
         state = "open" if self.is_speaking else "closed"
+        
+        # Obtenemos la ruta inteligente (intenta buscar reemplazos si falta el archivo exacto)
         path = self.profile_manager.get_image_path(self.current_emotion, state)
-        pix = QPixmap(path)
-        if pix.isNull():
-            path = self.profile_manager.get_image_path("neutral", state)
+        
+        pix = None
+        if path:
             pix = QPixmap(path)
         
-        if not pix.isNull():
-            if self.is_flipped:
-                pix = pix.transformed(QTransform().scale(-1, 1))
+        # --- PROTECCIÓN FINAL: GENERACIÓN EN MEMORIA ---
+        # Si no hay imagen (carpeta vacía o error de carga), creamos un aviso visual
+        if not pix or pix.isNull():
+            pix = QPixmap(200, 200)
+            pix.fill(QColor("transparent"))
+            painter = QPainter(pix)
+            
+            # Dibujar un círculo rojo semitransparente con un signo de interrogación
+            painter.setBrush(QBrush(QColor(255, 50, 50, 150))) # Rojo
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(10, 10, 180, 180)
+            
+            # Texto "?"
+            painter.setPen(QPen(QColor("white")))
+            font = QFont("Arial", 40, QFont.Weight.Bold)
+            painter.setFont(font)
+            painter.drawText(pix.rect(), Qt.AlignmentFlag.AlignCenter, "?")
+            painter.end()
+        # -----------------------------------------------
 
-            w = self.avatar_label.width()
-            h = self.avatar_label.height()
-            if w > 0 and h > 0:
-                self.avatar_label.setPixmap(pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        # Aplicar espejo si es necesario
+        if self.is_flipped:
+            pix = pix.transformed(QTransform().scale(-1, 1))
+
+        # Mostrar en la etiqueta
+        w = self.avatar_label.width()
+        h = self.avatar_label.height()
+        if w > 0 and h > 0:
+            self.avatar_label.setPixmap(pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
 
     # --- SEÑALES ---
     def handle_audio(self, chunk):

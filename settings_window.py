@@ -129,7 +129,6 @@ class SettingsDialog(QDialog):
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs)
 
-        # --- AÑADIR PESTAÑAS ---
         self.tabs.addTab(self.create_audio_tab(), "🎙️ Audio")
         self.tabs.addTab(self.create_visual_tab(), "🎨 Apariencia")
         self.tabs.addTab(self.create_avatar_tab(), "👕 Avatar")
@@ -172,9 +171,7 @@ class SettingsDialog(QDialog):
                     self.last_color_hex = new_color
         except: pass
 
-    # ==========================================
-    # 🆕 PESTAÑA: AUDIO (CORREGIDA ALINEACIÓN)
-    # ==========================================
+    # --- PESTAÑA AUDIO CORREGIDA ---
     def create_audio_tab(self):
         tab = QWidget()
         layout = QFormLayout(tab)
@@ -213,200 +210,33 @@ class SettingsDialog(QDialog):
         thres_layout.addWidget(self.thres_label)
         layout.addRow("Umbral:", thres_layout)
         
-        layout.addRow(QLabel(" "))
+        layout.addRow(QLabel(" ")) # Espaciador
         
-        # --- CORRECCIÓN ---
+        # --- AQUÍ ESTÁ EL CAMBIO CLAVE ---
+        # 1. Quitamos el margin-top que empujaba el texto
         lbl_test = QLabel("Prueba de Audio:")
-        # 1. ELIMINAMOS 'margin-top: 10px'
         lbl_test.setStyleSheet("font-weight: bold;") 
         
         self.audio_test_bar = PillProgressBar()
         
-        # 2. USAMOS UN CONTENEDOR PARA CENTRAR VERTICALMENTE
+        # 2. Usamos un contenedor para centrar verticalmente la barra
         bar_container = QWidget()
         bar_layout = QHBoxLayout(bar_container)
         bar_layout.setContentsMargins(0, 0, 0, 0)
-        bar_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter) # Esto hace la magia
+        bar_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter) # Centrado vertical
         bar_layout.addWidget(self.audio_test_bar)
         
         layout.addRow(lbl_test, bar_container)
+        # ---------------------------------
         
         return tab
 
-    # ==========================================
-    # 🆕 PESTAÑA: DETALLES DEL SISTEMA
-    # ==========================================
-    def create_system_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(30, 30, 30, 30)
-        layout.setSpacing(20)
-
-        # 1. Información de Ubicación
-        path_group = QGroupBox("Ubicación del Proyecto")
-        path_layout = QVBoxLayout()
-        current_path = os.getcwd()
-        lbl_path = QLabel(f"{current_path}")
-        lbl_path.setWordWrap(True)
-        lbl_path.setStyleSheet("color: #aaa; font-family: monospace;")
-        path_layout.addWidget(lbl_path)
-        
-        btn_open_folder = QPushButton("Abrir Carpeta")
-        btn_open_folder.setFixedSize(120, 30)
-        btn_open_folder.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(current_path)))
-        path_layout.addWidget(btn_open_folder)
-        path_group.setLayout(path_layout)
-        layout.addWidget(path_group)
-
-        # 2. Peso de la Aplicación
-        size_group = QGroupBox("Almacenamiento")
-        size_layout = QFormLayout()
-        
-        # Calcular peso (excluyendo venv y .git para ser realistas)
-        total_size = 0
-        file_count = 0
-        exclude_dirs = {'venv', '.git', '__pycache__', '.idea', '.vscode'}
-        
-        for dirpath, dirnames, filenames in os.walk(current_path):
-            dirnames[:] = [d for d in dirnames if d not in exclude_dirs]
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                if not os.path.islink(fp):
-                    total_size += os.path.getsize(fp)
-                    file_count += 1
-        
-        size_str = f"{total_size / (1024*1024):.2f} MB"
-        
-        size_layout.addRow("Peso Total (aprox):", QLabel(size_str))
-        size_layout.addRow("Archivos:", QLabel(str(file_count)))
-        size_group.setLayout(size_layout)
-        layout.addWidget(size_group)
-
-        # 3. Detalles Técnicos
-        tech_group = QGroupBox("Entorno de Ejecución")
-        tech_layout = QFormLayout()
-        
-        tech_layout.addRow("Sistema Operativo:", QLabel(f"{platform.system()} {platform.release()}"))
-        tech_layout.addRow("Arquitectura:", QLabel(platform.machine()))
-        tech_layout.addRow("Versión de Python:", QLabel(platform.python_version()))
-        
-        tech_group.setLayout(tech_layout)
-        layout.addWidget(tech_group)
-
-        layout.addStretch()
-        return tab
-
-    # ==========================================
-    # 🆕 PESTAÑA: ABOUT (SOBRE)
-    # ==========================================
-    def create_about_tab(self):
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
-        layout.setContentsMargins(40, 40, 40, 40)
-        layout.setSpacing(15)
-
-        # Logo / Emoji Grande
-        lbl_icon = QLabel("🎙️")
-        lbl_icon.setStyleSheet("font-size: 64px;")
-        lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(lbl_icon)
-
-        # Título
-        lbl_title = QLabel("AI PNGTuber")
-        lbl_title.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
-        lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(lbl_title)
-
-        # Versión
-        lbl_ver = QLabel("Versión 1.1.0")
-        lbl_ver.setStyleSheet("color: #888; font-size: 14px;")
-        lbl_ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(lbl_ver)
-
-        # Descripción
-        desc_text = (
-            "Un avatar virtual inteligente que reacciona a tu voz y emociones "
-            "en tiempo real utilizando Inteligencia Artificial."
-        )
-        lbl_desc = QLabel(desc_text)
-        lbl_desc.setWordWrap(True)
-        lbl_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_desc.setStyleSheet("color: #ccc; margin: 10px 0;")
-        layout.addWidget(lbl_desc)
-
-        # Línea separadora
-        line = QFrame()
-        line.setFrameShape(QFrame.Shape.HLine)
-        line.setFrameShadow(QFrame.Shadow.Sunken)
-        line.setStyleSheet("background-color: #444;")
-        layout.addWidget(line)
-
-        # Créditos
-        lbl_credits = QLabel("Desarrollado por <b>JJaroll</b>")
-        lbl_credits.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(lbl_credits)
-
-        # Tecnologías
-        lbl_tech = QLabel("Powered by Python, PyQt6 & PyTorch")
-        lbl_tech.setStyleSheet("color: #666; font-size: 11px;")
-        lbl_tech.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(lbl_tech)
-
-        # Licencia
-        lbl_license = QLabel("Distribuido bajo Licencia MIT")
-        lbl_license.setStyleSheet("color: #555; font-size: 11px; font-style: italic;")
-        lbl_license.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(lbl_license)
-
-        layout.addSpacing(20)
-
-        # Botón GitHub
-        btn_github = QPushButton("  Ver en GitHub")
-        # Usamos un estilo un poco más llamativo para el CTA
-        btn_github.setStyleSheet("""
-            QPushButton {
-                background-color: #24292e;
-                color: white;
-                border: 1px solid #444;
-                border-radius: 5px;
-                padding: 8px 15px;
-                font-weight: bold;
-            }
-            QPushButton:hover { background-color: #2f363d; }
-        """)
-        btn_github.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_github.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/JJaroll/PngTuber_IA")))
-        
-        # Botón Reportar Bug
-        btn_bug = QPushButton("🐛 Reportar un Problema")
-        btn_bug.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #aaa;
-                border: none;
-                text-decoration: underline;
-            }
-            QPushButton:hover { color: #fff; }
-        """)
-        btn_bug.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_bug.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/JJaroll/PngTuber_IA/issues")))
-
-        layout.addWidget(btn_github)
-        layout.addWidget(btn_bug)
-
-        layout.addStretch()
-        return tab
-
-    # ==========================================
-    # PESTAÑAS ANTERIORES (CONSERVADAS)
-    # ==========================================
+    # --- PESTAÑA APARIENCIA ---
     def create_visual_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(20, 20, 20, 20)
         
-        # --- GRUPO FONDO ---
         bg_group = QGroupBox("Color de Fondo")
         bg_layout = QVBoxLayout()
         
@@ -440,7 +270,6 @@ class SettingsDialog(QDialog):
         
         bg_layout.addLayout(grid_opts)
 
-        # Opción Personalizada
         custom_layout = QHBoxLayout()
         self.rb_custom = QRadioButton("Seleccionar Color:")
         self.bg_radios.addButton(self.rb_custom)
@@ -465,7 +294,6 @@ class SettingsDialog(QDialog):
         bg_group.setLayout(bg_layout)
         layout.addWidget(bg_group)
 
-        # --- RESTO ---
         self.shadow_cb = QCheckBox("Activar Sombra Suave")
         self.shadow_cb.setChecked(self.main_window.shadow_enabled)
         self.shadow_cb.toggled.connect(self.main_window.set_shadow_enabled)
@@ -500,6 +328,7 @@ class SettingsDialog(QDialog):
             self.bg_manager.change_background(rgba)
             self.rb_custom.setChecked(True)
 
+    # --- PESTAÑA AVATAR ---
     def create_avatar_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
@@ -666,51 +495,7 @@ class SettingsDialog(QDialog):
         self.bg_manager.import_skin_dialog()
         self.refresh_avatar_grid()
 
-    def create_audio_tab(self):
-        tab = QWidget()
-        layout = QFormLayout(tab)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-
-        self.mic_combo = QComboBox()
-        devices = self.main_window.audio_thread.list_devices()
-        current_idx = self.main_window.audio_thread.device_index
-        idx_map = {}
-        for i, (dev_idx, name) in enumerate(devices):
-            self.mic_combo.addItem(f"{name[:35]}...", dev_idx)
-            idx_map[dev_idx] = i 
-        if current_idx in idx_map:
-            self.mic_combo.setCurrentIndex(idx_map[current_idx])
-        self.mic_combo.currentIndexChanged.connect(self.on_mic_changed)
-        layout.addRow("Dispositivo:", self.mic_combo)
-
-        self.sens_slider = QSlider(Qt.Orientation.Horizontal)
-        self.sens_slider.setRange(1, 50) 
-        self.sens_slider.setValue(int(self.main_window.mic_sensitivity * 10))
-        self.sens_label = QLabel(f"{self.main_window.mic_sensitivity:.1f}")
-        self.sens_slider.valueChanged.connect(lambda v: self.on_sensitivity(v))
-        sens_layout = QHBoxLayout()
-        sens_layout.addWidget(self.sens_slider)
-        sens_layout.addWidget(self.sens_label)
-        layout.addRow("Sensibilidad:", sens_layout)
-
-        self.thres_slider = QSlider(Qt.Orientation.Horizontal)
-        self.thres_slider.setRange(1, 100) 
-        self.thres_slider.setValue(int(self.main_window.audio_threshold * 1000))
-        self.thres_label = QLabel(f"{self.main_window.audio_threshold:.3f}")
-        self.thres_slider.valueChanged.connect(lambda v: self.on_threshold(v))
-        thres_layout = QHBoxLayout()
-        thres_layout.addWidget(self.thres_slider)
-        thres_layout.addWidget(self.thres_label)
-        layout.addRow("Umbral:", thres_layout)
-        
-        layout.addRow(QLabel(" "))
-        lbl_test = QLabel("Prueba de Audio:")
-        lbl_test.setStyleSheet("font-weight: bold; margin-top: 10px;")
-        self.audio_test_bar = PillProgressBar()
-        layout.addRow(lbl_test, self.audio_test_bar)
-        return tab
-
+    # --- PESTAÑA ATAJOS ---
     def create_hotkeys_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
@@ -839,3 +624,149 @@ class SettingsDialog(QDialog):
         real_val = val / 1000.0
         self.thres_label.setText(f"{real_val:.3f}")
         self.main_window.set_audio_threshold(real_val)
+
+    # --- PESTAÑA SISTEMA ---
+    def create_system_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(30, 30, 30, 30)
+        layout.setSpacing(20)
+
+        path_group = QGroupBox("Ubicación del Proyecto")
+        path_layout = QVBoxLayout()
+        current_path = os.getcwd()
+        lbl_path = QLabel(f"{current_path}")
+        lbl_path.setWordWrap(True)
+        lbl_path.setStyleSheet("color: #aaa; font-family: monospace;")
+        path_layout.addWidget(lbl_path)
+        
+        btn_open_folder = QPushButton("Abrir Carpeta")
+        btn_open_folder.setFixedSize(120, 30)
+        btn_open_folder.clicked.connect(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(current_path)))
+        path_layout.addWidget(btn_open_folder)
+        path_group.setLayout(path_layout)
+        layout.addWidget(path_group)
+
+        size_group = QGroupBox("Almacenamiento")
+        size_layout = QFormLayout()
+        
+        total_size = 0
+        file_count = 0
+        exclude_dirs = {'venv', '.git', '__pycache__', '.idea', '.vscode'}
+        
+        for dirpath, dirnames, filenames in os.walk(current_path):
+            dirnames[:] = [d for d in dirnames if d not in exclude_dirs]
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                if not os.path.islink(fp):
+                    total_size += os.path.getsize(fp)
+                    file_count += 1
+        
+        size_str = f"{total_size / (1024*1024):.2f} MB"
+        
+        size_layout.addRow("Peso Total (aprox):", QLabel(size_str))
+        size_layout.addRow("Archivos:", QLabel(str(file_count)))
+        size_group.setLayout(size_layout)
+        layout.addWidget(size_group)
+
+        tech_group = QGroupBox("Entorno de Ejecución")
+        tech_layout = QFormLayout()
+        
+        tech_layout.addRow("Sistema Operativo:", QLabel(f"{platform.system()} {platform.release()}"))
+        tech_layout.addRow("Arquitectura:", QLabel(platform.machine()))
+        tech_layout.addRow("Versión de Python:", QLabel(platform.python_version()))
+        
+        tech_group.setLayout(tech_layout)
+        layout.addWidget(tech_group)
+
+        layout.addStretch()
+        return tab
+
+    # --- PESTAÑA ABOUT ---
+    def create_about_tab(self):
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        layout.setContentsMargins(40, 40, 40, 40)
+        layout.setSpacing(15)
+
+        lbl_icon = QLabel("🎙️")
+        lbl_icon.setStyleSheet("font-size: 64px;")
+        lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(lbl_icon)
+
+        lbl_title = QLabel("AI PNGTuber")
+        lbl_title.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+        lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(lbl_title)
+
+        lbl_ver = QLabel("Versión 1.1.0")
+        lbl_ver.setStyleSheet("color: #888; font-size: 14px;")
+        lbl_ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(lbl_ver)
+
+        desc_text = (
+            "Un avatar virtual inteligente que reacciona a tu voz y emociones "
+            "en tiempo real utilizando Inteligencia Artificial."
+        )
+        lbl_desc = QLabel(desc_text)
+        lbl_desc.setWordWrap(True)
+        lbl_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_desc.setStyleSheet("color: #ccc; margin: 10px 0;")
+        layout.addWidget(lbl_desc)
+
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        line.setStyleSheet("background-color: #444;")
+        layout.addWidget(line)
+
+        lbl_credits = QLabel("Desarrollado por <b>JJaroll</b>")
+        lbl_credits.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(lbl_credits)
+
+        lbl_tech = QLabel("Powered by Python, PyQt6 & PyTorch")
+        lbl_tech.setStyleSheet("color: #666; font-size: 11px;")
+        lbl_tech.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(lbl_tech)
+
+        lbl_license = QLabel("Distribuido bajo Licencia MIT")
+        lbl_license.setStyleSheet("color: #555; font-size: 11px; font-style: italic;")
+        lbl_license.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(lbl_license)
+
+        layout.addSpacing(20)
+
+        btn_github = QPushButton("  Ver en GitHub")
+        btn_github.setStyleSheet("""
+            QPushButton {
+                background-color: #24292e;
+                color: white;
+                border: 1px solid #444;
+                border-radius: 5px;
+                padding: 8px 15px;
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #2f363d; }
+        """)
+        btn_github.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_github.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/JJaroll/PngTuber_IA")))
+        
+        btn_bug = QPushButton("🐛 Reportar un Problema")
+        btn_bug.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #aaa;
+                border: none;
+                text-decoration: underline;
+            }
+            QPushButton:hover { color: #fff; }
+        """)
+        btn_bug.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_bug.clicked.connect(lambda: QDesktopServices.openUrl(QUrl("https://github.com/JJaroll/PngTuber_IA/issues")))
+
+        layout.addWidget(btn_github)
+        layout.addWidget(btn_bug)
+
+        layout.addStretch()
+        return tab
