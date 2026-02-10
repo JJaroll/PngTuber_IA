@@ -1,12 +1,12 @@
 {
-    "current_profile": "Default",
+    "current_profile": "Nuevo",
     "bounce_enabled": false,
-    "bounce_amplitude": 10,
-    "bounce_speed": 0.3,
-    "shadow_enabled": false,
+    "bounce_amplitude": 24,
+    "bounce_speed": 0.7,
+    "shadow_enabled": true,
     "is_muted": false,
     "background_color": "#0000FE",
-    "microphone_index": null,
+    "microphone_index": 1,
     "enable_hotkeys": true,
     "hotkeys": {
         "mute_toggle": "m",
@@ -18,7 +18,7 @@
         "sadness": "3",
         "anger": "4"
     },
-    "mic_sensitivity": 2.3,
+    "mic_sensitivity": 2.5,
     "audio_threshold": 0.028,
     "tutorial_completed": true
 }

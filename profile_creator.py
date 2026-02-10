@@ -16,7 +16,7 @@ class ProfileCreatorDialog(QDialog):
 
         self.layout = QVBoxLayout(self)
 
-        # Sección 1: Nombre del Skin
+        # Sección 1: Nombre
         self.layout.addWidget(QLabel("Nombre del Nuevo Skin (Ej: Traje_Gala):"))
         self.name_input = QLineEdit()
         self.name_input.setPlaceholderText("Escribe el nombre aquí...")
@@ -25,13 +25,12 @@ class ProfileCreatorDialog(QDialog):
         self.layout.addSpacing(10)
         self.layout.addWidget(QLabel("Asigna las imágenes correspondientes:"))
 
-        # Sección 2: Grid de selección de imágenes
+        # Sección 2: Grid
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         content = QWidget()
         self.grid = QGridLayout(content)
         
-        # Definición de los slots necesarios
         self.slots = [
             ("Neutral - Cerrada", "neutral_closed"),
             ("Neutral - Abierta", "neutral_open"),
@@ -44,18 +43,12 @@ class ProfileCreatorDialog(QDialog):
         ]
 
         self.labels = {}
-        
         for i, (text, key) in enumerate(self.slots):
-            # Nombre del estado
             self.grid.addWidget(QLabel(text), i, 0)
-            
-            # Estado de carga
             lbl_status = QLabel("❌ Sin imagen")
             lbl_status.setStyleSheet("color: gray; font-style: italic;")
             self.labels[key] = lbl_status
             self.grid.addWidget(lbl_status, i, 1)
-
-            # Botón de carga
             btn = QPushButton("📂 Seleccionar")
             btn.clicked.connect(lambda _, k=key: self.select_image(k))
             self.grid.addWidget(btn, i, 2)
@@ -63,7 +56,7 @@ class ProfileCreatorDialog(QDialog):
         scroll.setWidget(content)
         self.layout.addWidget(scroll)
 
-        # Sección 3: Botones de acción
+        # Sección 3: Botones
         btns = QHBoxLayout()
         cancel_btn = QPushButton("Cancelar")
         cancel_btn.clicked.connect(self.reject)
@@ -85,9 +78,14 @@ class ProfileCreatorDialog(QDialog):
             self.labels[key].setStyleSheet("color: green; font-weight: bold;")
 
     def save_profile(self):
+        # --- NUEVO: Verificación de límite ---
+        current_skins = [d for d in os.listdir(self.avatars_dir) if os.path.isdir(os.path.join(self.avatars_dir, d))]
+        if len(current_skins) >= 12:
+            QMessageBox.warning(self, "Límite Alcanzado", "Has alcanzado el límite de 12 skins. Borra alguno manualmente antes de crear uno nuevo.")
+            return
+        # -------------------------------------
+
         name = self.name_input.text().strip()
-        
-        # Validaciones básicas
         if not name:
             return QMessageBox.warning(self, "Error", "Por favor escribe un nombre para el skin.")
         
@@ -100,7 +98,6 @@ class ProfileCreatorDialog(QDialog):
 
         try:
             os.makedirs(target_dir)
-            # Copiar y renombrar archivos
             for _, key in self.slots:
                 if key in self.selected_files:
                     src = self.selected_files[key]
@@ -109,7 +106,6 @@ class ProfileCreatorDialog(QDialog):
             
             QMessageBox.information(self, "Éxito", f"Skin '{name}' creado correctamente.")
             
-            # --- PREGUNTAR SI DESEA EXPORTAR .ptuber ---
             reply = QMessageBox.question(
                 self, "Exportar Skin", 
                 "¿Deseas guardar un archivo .ptuber para compartir este skin?",
@@ -124,39 +120,24 @@ class ProfileCreatorDialog(QDialog):
             QMessageBox.critical(self, "Error Fatal", f"No se pudo crear el perfil:\n{e}")
 
     def export_ptuber(self, name, source_dir):
-        # Pedir ubicación de guardado
         save_path, _ = QFileDialog.getSaveFileName(
-            self, "Guardar Skin Compacto", 
-            f"{name}.ptuber", 
-            "PNGTuber Profile (*.ptuber)"
+            self, "Guardar Skin Compacto", f"{name}.ptuber", "PNGTuber Profile (*.ptuber)"
         )
-
-        if not save_path:
-            return
+        if not save_path: return
 
         try:
-            # Crear metadata básica
-            meta = {
-                "name": name,
-                "version": "1.0",
-                "author": "Usuario" 
-            }
+            meta = { "name": name, "version": "1.0", "author": "Usuario" }
             meta_path = os.path.join(source_dir, "meta.json")
             with open(meta_path, "w") as f:
                 json.dump(meta, f, indent=4)
 
-            # Crear ZIP (.ptuber)
             with zipfile.ZipFile(save_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                # Agregar metadata
                 zipf.write(meta_path, "meta.json")
-                # Agregar imágenes
                 for filename in os.listdir(source_dir):
                     if filename.endswith(".PNG") or filename.endswith(".png"):
                         zipf.write(os.path.join(source_dir, filename), filename)
             
-            # Limpiar metadata temporal
             os.remove(meta_path)
-
             QMessageBox.information(self, "Exportado", f"Archivo guardado en:\n{save_path}")
 
         except Exception as e:

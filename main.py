@@ -2,35 +2,47 @@ import sys
 import json
 import urllib.request
 import numpy as np
-from PyQt6.QtWidgets import QApplication, QLabel, QMainWindow, QVBoxLayout, QWidget, QHBoxLayout, QSizeGrip, QGraphicsDropShadowEffect, QPushButton, QSlider, QSizePolicy, QProgressBar, QMessageBox
-from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QUrl, QPoint
-from PyQt6.QtGui import QPixmap, QImage, QPainter, QColor, QTransform, QShortcut, QKeySequence, QDesktopServices, QPen, QFont
+from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout, 
+                             QWidget, QHBoxLayout, QSizeGrip, QGraphicsDropShadowEffect, 
+                             QPushButton, QSizePolicy, QMessageBox)
+from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QUrl, QPoint, QRect
+from PyQt6.QtGui import (QPixmap, QPainter, QColor, QTransform, QShortcut, 
+                         QKeySequence, QDesktopServices, QPen, QFont, QBrush, QCursor)
+
+# --- IMPORTS LOCALES ---
+from profile_manager import AvatarProfileManager
+from background import BackgroundManager
+from mac_gui import MacWindowControls
+from config_manager import ConfigManager
+from hotkey_manager import HotkeyManager
+from core_systems import AudioMonitorThread, EmotionThread
+
+# Nuevos componentes creados recientemente
+from settings_window import SettingsDialog
+from ui_components import PillProgressBar 
 
 CURRENT_VERSION = "1.0.0"
-UPDATE_URL = "https://pastebin.com/raw/kPjwkJu2" # Placeholder
+UPDATE_URL = "https://pastebin.com/raw/xux8fcwt" # Placeholder
 
 class UpdateChecker(QThread):
-    update_available = pyqtSignal(str)
+    # Modificamos la señal para enviar dos textos: (url, version_nueva)
+    update_available = pyqtSignal(str, str) 
 
     def run(self):
         try:
             req = urllib.request.Request(
                 UPDATE_URL, 
-                headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36'}
+                headers={'User-Agent': 'Mozilla/5.0'}
             )
             with urllib.request.urlopen(req) as response:
                 data = json.loads(response.read().decode())
                 remote_version = data.get("version", "0.0.0")
                 download_url = data.get("url", "")
                 
-                print(f"[DEBUG] Check Update: {CURRENT_VERSION} vs {remote_version}")
-
-                # Simple version comparison (assumes X.Y.Z format)
+                # Comparamos versiones
                 if remote_version > CURRENT_VERSION:
-                    print(f"[DEBUG] Update found: {download_url}")
-                    self.update_available.emit(download_url)
-                else:
-                    print("[DEBUG] No update found.")
+                    # Emitimos URL y la Versión detectada
+                    self.update_available.emit(download_url, remote_version)
 
         except Exception as e:
             print(f"[ERROR] Update check failed: {e}")
@@ -45,11 +57,8 @@ class TutorialOverlay(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        # Fondo semitransparente
         painter.fillRect(self.rect(), QColor(0, 0, 0, 150))
         
-        # Configuración de Texto y Líneas
         pen = QPen(Qt.GlobalColor.white)
         pen.setWidth(2)
         painter.setPen(pen)
@@ -60,19 +69,15 @@ class TutorialOverlay(QWidget):
         rect = self.rect()
         center = rect.center()
         
-        # 1. Flip & Menu (Centro)
         painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Flip: Ctrl+F\nClick derecho: Menú")
         
-        # 2. Volumen (Abajo, aprox)
-        # Asumimos que la barra de volumen está en los últimos 20px
         start_arrow = QPoint(center.x(), rect.bottom() - 60)
         end_arrow = QPoint(center.x(), rect.bottom() - 20)
         painter.drawLine(start_arrow, end_arrow)
         
         painter.setFont(QFont("Arial", 12))
-        painter.drawText(start_arrow.x() - 60, start_arrow.y() - 5, "Barra de Volumen")
+        painter.drawText(start_arrow.x() - 60, start_arrow.y() - 5, "Controles")
         
-        # 3. Mensaje de cierre
         painter.setFont(QFont("Arial", 10, QFont.Weight.Normal))
         painter.drawText(rect.adjusted(0, 0, 0, -50), Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter, "Haz clic para comenzar")
 
@@ -81,14 +86,6 @@ class TutorialOverlay(QWidget):
             self.parent_window.mark_tutorial_completed()
         self.close()
         self.deleteLater()
-
-# Imports Locales
-from profile_manager import AvatarProfileManager
-from background import BackgroundManager
-from mac_gui import MacWindowControls
-from config_manager import ConfigManager
-from hotkey_manager import HotkeyManager
-from core_systems import AudioMonitorThread, EmotionThread
 
 class PNGTuberApp(QMainWindow):
     def __init__(self):
@@ -105,7 +102,7 @@ class PNGTuberApp(QMainWindow):
         self.mic_sensitivity = self.config.get("mic_sensitivity", 1.0)
         self.audio_threshold = self.config.get("audio_threshold", 0.02)
         
-        # Configuración Visual (Recuperada del JSON)
+        # Configuración Visual
         self.bounce_enabled = self.config.get("bounce_enabled", True)
         self.bounce_amplitude = self.config.get("bounce_amplitude", 10)
         self.bounce_speed = self.config.get("bounce_speed", 0.3)
@@ -122,7 +119,7 @@ class PNGTuberApp(QMainWindow):
         # 3. Interfaz Gráfica
         self.init_ui()
 
-        # 4. Sistemas de Audio e IA (Hilos)
+        # 4. Sistemas de Audio e IA
         saved_mic = self.config.get("microphone_index")
         self.audio_thread = AudioMonitorThread(device_index=saved_mic, threshold=self.audio_threshold, sensitivity=self.mic_sensitivity)
         self.audio_thread.volume_signal.connect(self.update_mouth)
@@ -133,16 +130,10 @@ class PNGTuberApp(QMainWindow):
         self.emotion_thread.emotion_signal.connect(self.update_emotion)
         self.emotion_thread.start()
 
-
-
         # 5. Update Checker
-        self.update_checker = UpdateChecker()
-        self.update_checker.update_available.connect(self.show_update_dialog)
+        self.update_checker = UpdateChecker()   
+        self.update_checker.update_available.connect(self.on_update_found) 
         self.update_checker.start()
-
-        self.bounce_timer = QTimer()
-        self.bounce_timer.timeout.connect(self.animate_bounce)
-        self.bounce_timer.start(30)
  
         # 6. Gestor de Hotkeys
         self.ai_mode = True
@@ -150,111 +141,213 @@ class PNGTuberApp(QMainWindow):
         self.hotkey_manager.hotkey_triggered.connect(self.handle_hotkey)
         QTimer.singleShot(1000, self.hotkey_manager.start_listening)
         
-        # Estado inicial
         self.update_avatar()
 
         # Shortcuts
         self.flip_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
         self.flip_shortcut.activated.connect(self.toggle_flip)
 
-        # 7. Tutorial (Onboarding)
+        # 7. Tutorial
         if not self.config.get("tutorial_completed", False):
             QTimer.singleShot(500, self.show_tutorial)
 
     def init_ui(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.resize(400, 400)
+        self.resize(500, 500) # Un poco más grande para que quepa el dock
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
         self.layout.setContentsMargins(5, 5, 5, 5)
 
-        # Barra Superior (Mac Style)
+        # --- BARRA SUPERIOR (Mac Style + Update Badge) ---
         top_bar = QHBoxLayout()
-        top_bar.setContentsMargins(13, 13, 0, 0)
+        top_bar.setContentsMargins(13, 13, 13, 0) # Margen derecho agregado (13)
+        
+        # 1. Controles Mac (Izquierda)
         self.mac_controls = MacWindowControls(self)
         self.mac_controls.close_signal.connect(self.close)
         self.mac_controls.minimize_signal.connect(self.showMinimized)
         top_bar.addWidget(self.mac_controls)
+        
+        # 2. Espacio flexible
         top_bar.addStretch()
+
+        # 3. Botón de Actualización (Derecha - Oculto por defecto)
+        self.update_btn = QPushButton("⬇️  Update Available")
+        self.update_btn.setVisible(False) # Oculto hasta que haya update
+        self.update_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.update_btn.setFixedHeight(24)
+        
+        # Estilo de "Píldora" translúcida oscura
+        self.update_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(0, 0, 0, 120);
+                color: #ffffff;
+                border: 1px solid rgba(255, 255, 255, 30);
+                border-radius: 12px;
+                padding-left: 10px;
+                padding-right: 10px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: rgba(0, 0, 0, 180);
+                border: 1px solid rgba(255, 255, 255, 80);
+            }
+        """)
+        # Al hacer clic, abrimos el diálogo de confirmación
+        self.update_btn.clicked.connect(self.confirm_update)
+        
+        top_bar.addWidget(self.update_btn)
+        
         self.layout.addLayout(top_bar)
 
-        # Avatar
+        # --- AVATAR ---
         self.avatar_label = QLabel(self)
         self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
         self.avatar_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored)
         self.layout.addWidget(self.avatar_label, 1)
 
-        # Botón Mute (Abajo)
-        bottom_bar = QHBoxLayout()
-        bottom_bar.setContentsMargins(10, 0, 10, 10)
+        # --- DOCK INFERIOR ---
         
-        # Mute Button
+        # 1. Crear el contenedor físico para el fondo y bordes
+        self.bottom_container = QWidget()
+        self.bottom_container.setFixedHeight(60)
+        self.bottom_container.setStyleSheet("""
+            QWidget {
+                background-color: rgba(30, 30, 30, 220);
+                border-radius: 30px;
+                border: 1px solid rgba(255, 255, 255, 30);
+            }
+        """)
+        
+        # 2. Layout interno
+        bottom_layout = QHBoxLayout(self.bottom_container)
+        bottom_layout.setContentsMargins(15, 5, 15, 5)
+        bottom_layout.setSpacing(10)
+
+        # Estilo común de botones
+        btn_style = """
+            QPushButton { 
+                background-color: rgba(255,255,255,200); 
+                border-radius: 18px; 
+                border: none;
+                font-size: 16px;
+            } 
+            QPushButton:hover { background-color: rgba(255,255,255,255); }
+            QPushButton:pressed { background-color: rgba(200,200,200,255); }
+        """
+
+        # --- GRUPO 1: UTILIDADES (Izquierda) ---
+        
+        # Mute
         self.mute_btn = QPushButton("🔊")
-        self.mute_btn.setFixedSize(30, 30)
+        self.mute_btn.setFixedSize(36, 36)
         self.mute_btn.setCheckable(True)
         self.mute_btn.setChecked(self.is_muted)
-        self.mute_btn.setStyleSheet("QPushButton { background-color: rgba(255,255,255,200); border-radius: 15px; border: 1px solid #ccc; } QPushButton:checked { background-color: #ff6666; border: 1px solid red; }")
+        self.mute_btn.setToolTip("Silenciar / Activar Micrófono")
+        self.mute_btn.setStyleSheet(btn_style + "QPushButton:checked { background-color: #ff5555; color: white; }")
         self.mute_btn.clicked.connect(self.set_muted)
-        bottom_bar.addWidget(self.mute_btn)
+        bottom_layout.addWidget(self.mute_btn)
 
-        # Separador pequeño
-        bottom_bar.addSpacing(10)
+        # Flip
+        self.flip_btn = QPushButton("🔄")
+        self.flip_btn.setFixedSize(36, 36)
+        self.flip_btn.setToolTip("Voltear Avatar (Espejo)")
+        self.flip_btn.setStyleSheet(btn_style)
+        self.flip_btn.clicked.connect(self.toggle_flip)
+        bottom_layout.addWidget(self.flip_btn)
 
-        # Botones de Emociones / Hotkeys
-        hotkey_buttons = [
-            ("🤖", "ai_mode", "Modo IA (Automático)"),
+        # Configuración
+        self.settings_btn = QPushButton("⚙️")
+        self.settings_btn.setFixedSize(36, 36)
+        self.settings_btn.setToolTip("Abrir Configuración")
+        self.settings_btn.setStyleSheet(btn_style)
+        self.settings_btn.clicked.connect(self.open_settings_window)
+        bottom_layout.addWidget(self.settings_btn)
+
+        # --- SEPARADOR ---
+        line = QWidget()
+        line.setFixedSize(1, 25)
+        line.setStyleSheet("background-color: rgba(255,255,255,50);")
+        bottom_layout.addWidget(line)
+
+        # --- GRUPO 2: EMOCIONES (Derecha) ---
+        # 1. Lista de Emociones PRINCIPALES (Siempre visibles)
+        primary_buttons = [
+            ("🤖", "ai_mode", "Modo IA"),
             ("😐", "neutral", "Neutral"),
             ("😄", "happiness", "Feliz"),
-            ("😠", "anger", "Enojado"),
             ("😢", "sadness", "Triste")
         ]
 
-        for icon, action, tooltip in hotkey_buttons:
+        for icon, action, tooltip in primary_buttons:
             btn = QPushButton(icon)
-            btn.setFixedSize(30, 30)
+            btn.setFixedSize(36, 36)
             btn.setToolTip(tooltip)
-            btn.setStyleSheet("""
-                QPushButton { 
-                    background-color: rgba(255,255,255,150); 
-                    border-radius: 15px; 
-                    border: 1px solid rgba(0,0,0,50); 
-                    font-size: 14px;
-                } 
-                QPushButton:hover { 
-                    background-color: rgba(255,255,255,230); 
-                    border: 1px solid rgba(0,0,0,100);
-                }
-                QPushButton:pressed {
-                    background-color: rgba(200,200,200,230);
-                }
-            """)
-            # Usamos lambda con default arg para capturar el valor actual de action
+            btn.setStyleSheet(btn_style)
             btn.clicked.connect(lambda _, a=action: self.handle_hotkey(a))
-            bottom_bar.addWidget(btn)
+            bottom_layout.addWidget(btn)
 
-        bottom_bar.addStretch()
-
-        # Barra de Volumen Visual
-        self.volume_bar = QProgressBar()
-        self.volume_bar.setRange(0, 100)
-        self.volume_bar.setTextVisible(False)
-        self.volume_bar.setFixedHeight(8)  # Delgada
-        self.volume_bar.setStyleSheet("""
-            QProgressBar {
-                background-color: #333333;
-                border: 1px solid #555555;
-                border-radius: 4px;
-            }
-            QProgressBar::chunk {
-                background-color: #00FF00;
-                border-radius: 4px; 
-            }
+        # 2. Botón de EXPANDIR (Flecha)
+        self.expand_btn = QPushButton("›") # Usamos un carácter chevron para estilo
+        self.expand_btn.setFixedSize(24, 36) # Un poco más estrecho
+        self.expand_btn.setToolTip("Ver más emociones")
+        # Estilo ligeramente diferente para distinguirlo (letra más grande y negrita)
+        self.expand_btn.setStyleSheet("""
+            QPushButton { 
+                background-color: rgba(255,255,255,50); 
+                border-radius: 12px; 
+                border: none;
+                color: white;
+                font-size: 20px;
+                font-weight: bold;
+                padding-bottom: 3px;
+            } 
+            QPushButton:hover { background-color: rgba(255,255,255,100); }
         """)
-        bottom_bar.addWidget(self.volume_bar)
-        self.layout.addLayout(bottom_bar)
+        self.expand_btn.clicked.connect(self.toggle_emotions_menu)
+        bottom_layout.addWidget(self.expand_btn)
+
+        # 3. Lista de Emociones EXTRAS (Ocultas por defecto)
+        secondary_buttons = [
+            ("😠", "anger", "Enojado"),
+            ("😨", "fear", "Miedo"),
+            ("🤢", "disgust", "Asco")
+        ]
+
+        self.extra_emotion_btns = [] # Guardamos referencias para poder mostrarlos luego
+
+        for icon, action, tooltip in secondary_buttons:
+            btn = QPushButton(icon)
+            btn.setFixedSize(36, 36)
+            btn.setToolTip(tooltip)
+            btn.setStyleSheet(btn_style)
+            btn.clicked.connect(lambda _, a=action: self.handle_hotkey(a))
+            
+            # MAGIA AQUÍ: Los agregamos al layout pero los ocultamos
+            bottom_layout.addWidget(btn)
+            btn.setVisible(False) 
+            self.extra_emotion_btns.append(btn)
+
+        # --- GRUPO 3: VOLUMEN (Extremo Derecha) ---
+        self.volume_bar = PillProgressBar()
+        self.volume_bar.setFixedWidth(100)
+        self.volume_bar._bg_color = QColor("#000000") # Fondo negro para combinar con el dock
+        bottom_layout.addWidget(self.volume_bar)
+        
+        # Añadir dock al layout principal centrado
+        center_dock_layout = QHBoxLayout()
+        center_dock_layout.addStretch()
+        center_dock_layout.addWidget(self.bottom_container)
+        center_dock_layout.addStretch()
+        
+        self.layout.addLayout(center_dock_layout)
+        self.layout.addSpacing(10)
+
+        self.last_color_hex = "#00E64D"
 
         # Efectos (Sombra y Resize)
         self.shadow_effect = QGraphicsDropShadowEffect()
@@ -266,7 +359,7 @@ class PNGTuberApp(QMainWindow):
         self.sizegrip = QSizeGrip(self)
         self.sizegrip.setStyleSheet("QSizeGrip { background-color: transparent; width: 20px; height: 20px; }")
 
-        # Gestor de Fondo (Menú Contextual)
+        # Gestor de Fondo
         self.bg_manager = BackgroundManager(self, self.profile_manager, self.config_manager)
         self.bg_manager.change_background(self.current_background)
 
@@ -274,6 +367,35 @@ class PNGTuberApp(QMainWindow):
     def toggle_flip(self):
         self.is_flipped = not self.is_flipped
         self.update_avatar()
+
+    # --- NUEVO: ABRIR AJUSTES ---
+    def open_settings_window(self):
+        dialog = SettingsDialog(self)
+        dialog.exec()
+
+    def toggle_emotions_menu(self):
+        # Verificar estado actual basado en el primer botón extra
+        if not self.extra_emotion_btns: return
+        
+        # Si están ocultos, los mostramos
+        should_show = not self.extra_emotion_btns[0].isVisible()
+        
+        for btn in self.extra_emotion_btns:
+            btn.setVisible(should_show)
+            
+        # Cambiar el icono de la flecha y el ancho del dock
+        if should_show:
+            self.expand_btn.setText("‹") # Flecha izquierda
+            self.expand_btn.setToolTip("Menos emociones")
+            # Opcional: Expandir ventana si es necesario
+            if self.width() < 600: 
+                self.resize(600, self.height())
+        else:
+            self.expand_btn.setText("›") # Flecha derecha
+            self.expand_btn.setToolTip("Ver más emociones")
+            # Opcional: Contraer ventana
+            if self.width() > 500:
+                self.resize(500, self.height())
 
     # --- LÓGICA DE ANIMACIÓN ---
     def animate_bounce(self):
@@ -290,33 +412,39 @@ class PNGTuberApp(QMainWindow):
         path = self.profile_manager.get_image_path(self.current_emotion, state)
         pix = QPixmap(path)
         if pix.isNull():
-            path = self.profile_manager.get_image_path("neutral", state) # Fallback
+            path = self.profile_manager.get_image_path("neutral", state)
             pix = QPixmap(path)
         
         if not pix.isNull():
-            # Aplicar Flip si es necesario
             if self.is_flipped:
                 pix = pix.transformed(QTransform().scale(-1, 1))
 
-            # Escalar manteniendo aspect ratio dentro de las dimensiones disponibles
             w = self.avatar_label.width()
             h = self.avatar_label.height()
             if w > 0 and h > 0:
                 self.avatar_label.setPixmap(pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
 
-    # --- CONECTORES (Señales) ---
+    # --- SEÑALES ---
     def handle_audio(self, chunk):
         if not self.is_muted:
             self.emotion_thread.add_audio(chunk)
-            
-            # Calcular nivel de volumen para la barra visual de manera simple con numpy
             try:
                 rms = np.sqrt(np.mean(chunk**2))
-                # Multiplicamos para que sea visible (ajustar factor según micrófono/necesidad)
                 level = int(rms * 500) 
-                self.volume_bar.setValue(min(100, level))
-            except:
-                pass
+                level = min(100, max(0, level))
+                
+                self.volume_bar.setValue(level)
+                
+                new_color = "#00E64D" # Verde
+                if level > 80: new_color = "#FF3333" # Rojo
+                elif level > 60: new_color = "#FF8800" # Naranja
+                elif level > 40: new_color = "#FFFF00" # Amarillo
+                
+                if new_color != self.last_color_hex:
+                    self.volume_bar.set_color_hex(new_color)
+                    self.last_color_hex = new_color
+
+            except Exception: pass
         else:
             self.volume_bar.setValue(0)
 
@@ -333,6 +461,7 @@ class PNGTuberApp(QMainWindow):
 
     def handle_hotkey(self, action):
         print(f"Hotkey: {action}")
+        
         if action == "mute_toggle":
             self.set_muted(not self.is_muted)
         elif action == "ai_mode":
@@ -349,13 +478,12 @@ class PNGTuberApp(QMainWindow):
                 "fear": "sad", 
                 "disgust": "angry"
             }
-            
             target_emo = manual_map.get(action, "neutral")
             self.current_emotion = target_emo
             self.update_avatar()
             print(f"🛑 Modo Manual: {action} -> {target_emo}")
 
-    # --- SETTERS (Aquí conectamos con background.py) ---
+    # --- SETTERS ---
     def set_microphone(self, index):
         print(f"🎤 Cambiando micrófono a ID: {index}")
         self.audio_thread.change_device(index)
@@ -374,7 +502,7 @@ class PNGTuberApp(QMainWindow):
     def set_muted(self, muted):
         self.is_muted = muted
         self.mute_btn.setChecked(muted)
-        self.mute_btn.setText("🔇" if muted else "🔊")
+        # Actualizamos el icono o color si es necesario
         self.config_manager.set("is_muted", muted)
         if muted:
             self.is_speaking = False
@@ -383,7 +511,7 @@ class PNGTuberApp(QMainWindow):
     def set_bounce_enabled(self, enabled):
         self.bounce_enabled = enabled
         self.config_manager.set("bounce_enabled", enabled)
-        if not enabled: # Reset visual inmediato
+        if not enabled:
             self.bounce_phase = 0
             self.avatar_label.setContentsMargins(0, 0, 0, 0)
 
@@ -408,14 +536,12 @@ class PNGTuberApp(QMainWindow):
         rect = self.rect()
         self.sizegrip.move(rect.right() - self.sizegrip.width(), rect.bottom() - self.sizegrip.height())
         self.update_avatar()
-        
-        # Actualizar overlay si existe
         if hasattr(self, 'tutorial') and self.tutorial and self.tutorial.isVisible():
              self.tutorial.setGeometry(rect)
-             
         super().resizeEvent(event)
 
     def contextMenuEvent(self, event):
+        # Mantenemos el clic derecho como acceso alternativo
         self.bg_manager.show_context_menu(event.pos())
 
     def showEvent(self, event):
@@ -457,6 +583,28 @@ class PNGTuberApp(QMainWindow):
     def mark_tutorial_completed(self):
         print("✅ Tutorial completado")
         self.config_manager.set("tutorial_completed", True)
+
+    # --- SISTEMA DE ACTUALIZACIONES ---
+    def on_update_found(self, url, version):
+        """Se llama cuando el hilo detecta una versión nueva"""
+        self.pending_update_url = url
+        # Actualizamos el texto del botón y lo mostramos
+        self.update_btn.setText(f"⬇️  Actualización v{version} Disponible")
+        self.update_btn.setVisible(True)
+        print(f"Update detected: {version}")
+
+    def confirm_update(self):
+        """Se llama al hacer clic en el botón de la barra superior"""
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Actualización Disponible")
+        msg.setText("¡Nueva versión disponible!")
+        msg.setInformativeText("¿Quieres ir a la página de descarga ahora?")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        msg.setDefaultButton(QMessageBox.StandardButton.Yes)
+        
+        if msg.exec() == QMessageBox.StandardButton.Yes:
+            if hasattr(self, 'pending_update_url'):
+                QDesktopServices.openUrl(QUrl(self.pending_update_url))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

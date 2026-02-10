@@ -1,12 +1,7 @@
 import os
-import zipfile
-import json
-import shutil
 from PyQt6.QtWidgets import QMenu, QWidget, QVBoxLayout, QLabel, QSlider, QWidgetAction, QFileDialog, QMessageBox
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
-from profile_creator import ProfileCreatorDialog
-from hotkey_gui import HotkeyConfigDialog
 
 class BackgroundManager:
     def __init__(self, main_window, profile_manager, config_manager): 
@@ -18,38 +13,25 @@ class BackgroundManager:
     def show_context_menu(self, position):
         menu = QMenu(self.main_window)
         
-        # --- SUBMENÚ: Audio ---
+        # 1. ACCIÓN RÁPIDA: MUTE
         mute_action = QAction("🔇 Silenciar / Mute", self.main_window)
         mute_action.setCheckable(True)
         mute_action.setChecked(self.main_window.is_muted)
         mute_action.triggered.connect(lambda checked: self.main_window.set_muted(checked))
         menu.addAction(mute_action)
 
-        mic_menu = menu.addMenu("🎤 Micrófono")
-        devices = self.main_window.audio_thread.list_devices()
-        current_idx = self.main_window.audio_thread.device_index
-        
-        for idx, name in devices:
-            display_name = (name[:30] + '..') if len(name) > 30 else name
-            a = QAction(display_name, self.main_window)
-            a.setCheckable(True)
-            if idx == current_idx:
-                a.setChecked(True)
-            elif current_idx is None and idx ==  self.main_window.audio_thread.p.get_default_input_device_info()['index']:
-                 a.setChecked(True)
-            a.triggered.connect(lambda _, i=idx: self.main_window.set_microphone(i))
-            mic_menu.addAction(a)
-
-        # --- SUBMENÚ: Ajustes de Audio ---
-        audio_settings_menu = menu.addMenu("🎚️ Ajustes de Audio")
-        self.create_slider_action(audio_settings_menu, "Sensibilidad", 1, 50, self.main_window.mic_sensitivity, self.main_window.set_mic_sensitivity, resolution=10)
-        self.create_slider_action(audio_settings_menu, "Umbral de Audio", 1, 100, self.main_window.audio_threshold, self.main_window.set_audio_threshold, resolution=1000)
-
         menu.addSeparator()
 
-        # --- SUBMENÚ: Fondo ---
+        # 2. SUBMENÚ: APARIENCIA / FONDO
         bg_menu = menu.addMenu("🎨 Fondo / Background")
-        actions = [("Transparente", "transparent"), ("Azul (Blue Screen)", "#0000FE"), ("Verde (Green Screen)", "#07FD01")]
+        
+        # Opciones en el orden solicitado
+        actions = [
+            ("Transparente", "transparent"),
+            ("Semitransparente", "rgba(0, 0, 0, 100)"),
+            ("Verde (Green Screen)", "#07FD01"),
+            ("Azul (Blue Screen)", "#0000FE")
+        ]
         
         for name, color in actions:
             a = QAction(name, self.main_window)
@@ -61,71 +43,60 @@ class BackgroundManager:
 
         bg_menu.addSeparator()
 
+        # Opción de Sombra (útil tenerla a mano)
         shadow_action = QAction("Sombra / Shadow", self.main_window)
         shadow_action.setCheckable(True)
         shadow_action.setChecked(self.main_window.shadow_enabled)
         shadow_action.triggered.connect(lambda checked: self.main_window.set_shadow_enabled(checked))
         bg_menu.addAction(shadow_action)
 
-        menu.addSeparator()
-
-        # --- SUBMENÚ: Skins ---
+        # 3. SUBMENÚ: SKINS (Solo Lista)
         skin_menu = menu.addMenu("👕 Skins / Avatares")
         
-        new_skin_action = QAction("➕ Crear Nuevo Skin...", self.main_window)
-        new_skin_action.triggered.connect(self.open_creator)
-        skin_menu.addAction(new_skin_action)
-
-        import_act = QAction("📥 Importar Skin (.ptuber)...", self.main_window)
-        import_act.triggered.connect(self.import_skin_dialog)
-        skin_menu.addAction(import_act)
-
-        export_act = QAction(f"📤 Exportar '{self.profile_manager.current_profile}'...", self.main_window)
-        export_act.triggered.connect(self.export_current_skin)
-        skin_menu.addAction(export_act)
-
-        skin_menu.addSeparator()
-
+        # Solo listamos los perfiles, sin herramientas de edición
         self.profile_manager.scan_profiles()
         for profile in self.profile_manager.profiles:
             action = QAction(profile, self.main_window)
             if profile == self.profile_manager.current_profile:
                 action.setCheckable(True)
                 action.setChecked(True)
+                # Ponemos el activo en negrita o destacado visualmente si el estilo lo permite
+                f = action.font()
+                f.setBold(True)
+                action.setFont(f)
+            
             action.triggered.connect(lambda _, p=profile: self.change_profile(p))
             skin_menu.addAction(action)
 
         menu.addSeparator()
 
-        # --- SUBMENÚ: Rebote ---
+        # 4. SUBMENÚ: REBOTE (Solo Toggle)
         bounce_menu = menu.addMenu("🎾 Rebote / Bounce")
         bounce_toggle = QAction("Activar Rebote", self.main_window)
         bounce_toggle.setCheckable(True)
         bounce_toggle.setChecked(self.main_window.bounce_enabled)
         bounce_toggle.triggered.connect(lambda checked: self.main_window.set_bounce_enabled(checked))
         bounce_menu.addAction(bounce_toggle)
-        bounce_menu.addSeparator()
-
-        self.create_slider_action(bounce_menu, "Amplitud Rebote", 0, 50, self.main_window.bounce_amplitude, self.main_window.set_bounce_amplitude)
-        self.create_slider_action(bounce_menu, "Velocidad Rebote", 1, 20, self.main_window.bounce_speed, self.main_window.set_bounce_speed, resolution=10)
 
         menu.addSeparator()
 
-        # Configuración Hotkeys
-        hotkey_action = QAction("⌨️ Configurar Hotkeys...", self.main_window)
-        hotkey_action.triggered.connect(self.open_hotkey_config)
-        menu.addAction(hotkey_action)
+        # 5. ACCESO A CONFIGURACIÓN COMPLETA
+        # Es buena práctica dejar un enlace a la ventana completa por si el usuario está acostumbrado al clic derecho
+        settings_action = QAction("⚙️ Abrir Configuración...", self.main_window)
+        settings_action.triggered.connect(self.main_window.open_settings_window)
+        menu.addAction(settings_action)
 
         menu.exec(self.main_window.mapToGlobal(position))
 
-    # --- LÓGICA DEL COLOR DEL FONDO ---
+    # --- LÓGICA DE CAMBIOS ---
     def change_background(self, color):
         self.main_window.current_background = color
         
-        if color == "transparent":#se pone transparente el widget
+        if color == "transparent":
             self.central_widget.setStyleSheet("background: transparent;")
-        else:#se pone el color deseado
-            self.central_widget.setStyleSheet(f"background-color: {color}; border-radius: 20px; border: 1px solid rgba(0,0,0,50);")
+        else:
+            # Si es semitransparente o color sólido, aplicamos estilo con bordes redondeados suaves
+            self.central_widget.setStyleSheet(f"background-color: {color}; border-radius: 20px;")
             
         self.config_manager.set("background_color", color)
 
@@ -134,15 +105,24 @@ class BackgroundManager:
         self.main_window.update_avatar()
         self.config_manager.set("current_profile", profile_name)
 
+    # Funciones de utilidad (export/import) necesarias para settings_window.py
+    # Aunque no se usen en el menú contextual, se mantienen aquí porque settings_window las llama a través de bg_manager
+    
     def open_creator(self):
+        # Importación diferida para evitar ciclos si fuera necesario, 
+        # aunque en este caso settings_window ya depende de esto.
+        from profile_creator import ProfileCreatorDialog
         dialog = ProfileCreatorDialog(self.main_window)
         if dialog.exec():
             self.profile_manager.scan_profiles()
 
     def open_hotkey_config(self):
+        # Esta función ya no se usa desde el menú, pero si settings_window la llamara (aunque ahora tiene su propia pestaña)
+        # la dejamos por compatibilidad o la podemos borrar si settings_window ya no la usa.
+        # (Nota: settings_window ahora incrusta la tabla, así que esto es legacy, pero no hace daño dejarlo por seguridad)
+        from hotkey_gui import HotkeyConfigDialog
         dialog = HotkeyConfigDialog(self.main_window)
         dialog.exec()
-
 
     def import_skin_dialog(self):
         path, _ = QFileDialog.getOpenFileName(self.main_window, "Importar Skin (.ptuber)", "", "PNGTuber Profile (*.ptuber)")
@@ -163,26 +143,3 @@ class BackgroundManager:
                 QMessageBox.information(self.main_window, "Éxito", f"Skin guardado en:\n{path}")
             else:
                 QMessageBox.critical(self.main_window, "Error", f"Error al exportar: {msg}")
-
-    def create_slider_action(self, menu, label_text, min_val, max_val, current_val, callback, resolution=1):
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(10, 5, 10, 5)
-        label = QLabel(f"{label_text}: {current_val}")
-        label.setStyleSheet("color: black;")
-        layout.addWidget(label)
-        slider = QSlider(Qt.Orientation.Horizontal)
-        slider.setMinimum(min_val)
-        slider.setMaximum(max_val)
-        slider.setValue(int(current_val * resolution) if resolution > 1 else int(current_val))
-        
-        def on_change(val):
-            real_val = val / resolution if resolution > 1 else val
-            label.setText(f"{label_text}: {real_val:.1f}" if resolution > 1 else f"{label_text}: {real_val}")
-            callback(real_val)
-
-        slider.valueChanged.connect(on_change)
-        layout.addWidget(slider)
-        action = QWidgetAction(menu)
-        action.setDefaultWidget(container)
-        menu.addAction(action)
