@@ -1,27 +1,32 @@
 # 🎙️ AI PNGTuber (Python + PyTorch)
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue) ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-red) ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-lightgrey) ![License](https://img.shields.io/badge/License-MIT-green)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue) ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-red) ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-lightgrey) ![License](https://img.shields.io/badge/License-MIT-green) ![Version](https://img.shields.io/badge/Version-1.1.0-blue)
 
-Un **PNGTuber inteligente** y moderno escrito en Python. A diferencia de los PNGTubers tradicionales que solo reaccionan al volumen, este proyecto utiliza **Inteligencia Artificial (Wav2Vec2)** para analizar tu tono de voz en tiempo real y cambiar la expresión de tu avatar automáticamente (Feliz, Enojado, Triste o Neutral).
+Un **PNGTuber inteligente** y moderno escrito en Python. A diferencia de los PNGTubers tradicionales que solo reaccionan al volumen, este proyecto utiliza **Inteligencia Artificial (Wav2Vec2)** para analizar tu tono de voz en tiempo real y cambiar la expresión de tu avatar automáticamente.
 
 Ideal para streamers, creadores de contenido o simplemente para divertirse en Discord/Zoom.
 
 ## ✨ Características Principales
 
-* **🧠 Cerebro IA:** Detecta emociones en tu voz usando un modelo de HuggingFace (`wav2vec2-base-finetuned-sentiment-classification`).
+* **🧠 Cerebro IA Multi-Modelo:**
+    *   **Español (SomosNLP):** Detecta *Neutral, Feliz, Triste, Enojado*.
+    *   **Inglés/Global (XLS-R):** Detecta *Neutral, Feliz, Triste, Enojado, Sorpresa, Asco, Miedo*.
+    *   *Nota: Puedes cambiar de modelo en tiempo real desde los Ajustes.*
 * **🗣️ Lip Sync:** Movimiento de boca reactivo al volumen del micrófono.
 * **🐇 Efectos Visuales:**
-    * **Rebote (Bounce):** El avatar salta sutilmente cuando hablas.
-    * **Sombra Suave:** Sombra realista debajo del avatar.
+    *   **Rebote (Bounce):** El avatar salta sutilmente cuando hablas.
+    *   **Sombra Suave:** Sombra realista debajo del avatar.
 * **🎨 Sistema de Skins (.ptuber):**
-    * Crea tus propios avatares con el **Creador Integrado**.
-    * Importa y exporta skins fácilmente para compartir con amigos.
-*   **⚙️ Configuración Persistente:** Guarda automáticamente tu micrófono preferido, sensibilidad, skin y colores.
-*   **🎹 Atajos Rápidos:** Botones en pantalla para cambiar emociones o volver al modo IA.
+    *   Crea tus propios avatares con el **Creador Integrado**.
+    *   Soporte para hasta **7 emociones** y estados de boca (cerrada/abierta).
+    *   Importa y exporta skins fácilmente para compartir con amigos.
+*   **⚙️ Configuración Personalizable:**
+    *   **Pestaña Sistema:** Selector de modelo IA y control de actualizaciones automáticas.
+    *   **Atajos:** Configura teclas globales para cada emoción.
+    *   **Persistencia:** Guarda automáticamente tu micrófono, sensibilidad y colores.
 *   **🖥️ Interfaz Moderna:**
-    *   Ventana sin bordes (Frameless).
-    *   Fondo transparente real (compatible con macOS y Windows).
-    *   Controles estilo Mac.
+    *   Ventana sin bordes (Frameless) con fondo transparente.
+    *   **Sistema de Actualizaciones:** Notificaciones discretas tipo "pill" cuando hay nuevas versiones.
 
 ## 🛠️ Instalación
 
@@ -53,7 +58,7 @@ Ideal para streamers, creadores de contenido o simplemente para divertirse en Di
     pip install -r requirements.txt
     ```
     *Si no tienes el archivo requirements.txt, las librerías principales son:*
-    `PyQt6`, `torch`, `torchaudio`, `transformers`, `pyaudio`, `numpy`.
+    `PyQt6`, `torch`, `torchaudio`, `transformers`, `huggingface_hub`, `pyaudio`, `numpy`.
 
 4.  **Instalar PyAudio (Si da error):**
     * **Windows:** `pip install pipwin && pipwin install pyaudio`
@@ -71,37 +76,36 @@ python main.py
 ## 🎨 Controles
 
 *   **Clic Izquierdo + Arrastrar:** Mover al personaje por la pantalla.
-*   **Clic Derecho:** Abrir el Menú Contextual (Ajustes avanzados).
+*   **Clic Derecho:** Abrir el Menú Contextual (Ajustes rápidos).
 *   **Esquina Inferior Derecha:** Redimensionar al personaje.
-*   **Botones Inferiores:**
+*   **Botones Inferiores (Dock):**
     *   🔊: Silenciar/Activar micrófono.
     *   🤖: Activar **Modo IA** (Automático).
-    *   😐, 😄, 😠, 😢: Forzar una emoción (Modo Manual).
+    *   😐, 😄, etc.: Forzar una emoción manualmente.
+    *   *Nota: Las emociones no soportadas por el modelo actual (ej. Miedo en español) aparecerán ocultas pero pueden ser activadas manualmente.*
 
-### Menú Contextual (Clic Derecho)
+### Atajos de Teclado (Por defecto)
+*   **1-4:** Emociones básicas (Neutral, Feliz, Triste, Enojado).
+*   **7-9:** Emociones extra (Sorpresa, Miedo, Asco).
+*   **X:** Activar Modo IA.
+*   **M:** Mutear micrófono.
+
+### Configuración Avanzada (Clic Derecho -> Ajustes)
 Desde aquí puedes controlar todo:
-
-*   **🎚️ Ajustes de Audio:**
-    *   **Sensibilidad:** Aumenta si el avatar no te escucha bien.
-    *   **Umbral:** Aumenta si el avatar se mueve con el ruido de fondo.
-*   **🎨 Fondo:** Cambiar entre Transparente (para OBS/Desktop) o Verde/Azul (Chroma Key).
-*   **👕 Skins:** Cambiar de avatar, crear uno nuevo o importar/exportar.
-*   **⚙️ Otras Opciones:**
-    *   Seleccionar Micrófono.
-    *   Activar/Desactivar Rebote y Sombra.
-    *   Ajustar intensidad del rebote.
+*   **Sistema:** Cambiar Modelo IA (Español/Inglés), verificar actualizaciones.
+*   **Audio:** Ajustar sensibilidad y umbral de silencio.
+*   **Apariencia:** Cambiar color de fondo (Transparente/Chroma).
+*   **Avatar:** Gestionar y editar Skins.
+*   **Atajos:** Personalizar las teclas rápidas.
 
 ## 📁 Estructura del Proyecto
-
-El código está modularizado para facilitar el mantenimiento:
 
 * **main.py:** Punto de entrada. Conecta la interfaz con la lógica.
 * **core_systems.py:** El Cerebro. Contiene los hilos de Audio (PyAudio) y de IA (Transformers).
 * **background.py:** Gestiona el menú contextual y las opciones visuales.
 * **profile_manager.py:** Lógica para guardar, cargar, importar y exportar skins (.ptuber).
 *   **config_manager.py:** Sistema de guardado de preferencias (settings.json).
-*   **mac_gui.py:** Botones personalizados de la ventana.
-*   **hotkey_manager.py:** Gestión de atajos de teclado globales.
+*   **settings_window.py:** Ventana de configuración completa.
 
 ## 🤝 Contribuir
 
@@ -117,4 +121,4 @@ El código está modularizado para facilitar el mantenimiento:
 
 Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
 
-Creado con ❤️
+Creado con ❤️ por **JJaroll**
