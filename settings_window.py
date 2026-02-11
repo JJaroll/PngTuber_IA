@@ -1,3 +1,19 @@
+"""
+PNGTuber IA
+-----------
+Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
+
+Desarrollado por: JJaroll
+GitHub: https://github.com/JJaroll
+Fecha: 10/02/2026
+Licencia: MIT
+"""
+
+__author__ = "JJaroll"
+__version__ = "1.0.0"
+__maintainer__ = "JJaroll"
+__status__ = "Production"
+
 import os
 import sys
 import platform
@@ -16,7 +32,7 @@ from ui_components import PillProgressBar
 from hotkey_gui import HotkeyRecorderDialog
 from core_systems import SUPPORTED_MODELS, get_model_path
 
-# --- WIDGET PERSONALIZADO: TARJETA DE AVATAR (Sin cambios) ---
+# --- WIDGET PERSONALIZADO: TARJETA DE AVATAR ---
 class AvatarCard(QFrame):
     clicked = pyqtSignal(str) 
     rename_requested = pyqtSignal(str)
@@ -215,26 +231,16 @@ class SettingsDialog(QDialog):
         thres_layout.addWidget(self.thres_slider)
         thres_layout.addWidget(self.thres_label)
         layout.addRow("Umbral:", thres_layout)
-        
-        layout.addRow(QLabel(" ")) # Espaciador
-        
-        # --- AQUÍ ESTÁ EL CAMBIO CLAVE ---
-        # 1. Quitamos el margin-top que empujaba el texto
+        layout.addRow(QLabel(" ")) 
         lbl_test = QLabel("Prueba de Audio:")
         lbl_test.setStyleSheet("font-weight: bold;") 
-        
         self.audio_test_bar = PillProgressBar()
-        
-        # 2. Usamos un contenedor para centrar verticalmente la barra
         bar_container = QWidget()
         bar_layout = QHBoxLayout(bar_container)
         bar_layout.setContentsMargins(0, 0, 0, 0)
-        bar_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter) # Centrado vertical
+        bar_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter) 
         bar_layout.addWidget(self.audio_test_bar)
-        
         layout.addRow(lbl_test, bar_container)
-        # ---------------------------------
-        
         return tab
 
     # --- PESTAÑA APARIENCIA ---
@@ -455,7 +461,6 @@ class SettingsDialog(QDialog):
 
     def on_avatar_selected(self, profile_name):
         self.bg_manager.change_profile(profile_name)
-        # Usamos QTimer para evitar eliminar el widget que envió la señal mientras procesa el evento
         QTimer.singleShot(0, self.refresh_avatar_grid)
     
     def edit_avatar(self, profile_name):
@@ -712,11 +717,9 @@ class SettingsDialog(QDialog):
         path_layout.addWidget(self.lbl_model_path)
         path_layout.addWidget(self.btn_open_model)
         
-        # Cambio de layout: Las etiquetas van arriba para dar más espacio
         ai_layout.addRow(QLabel("Ruta del Modelo:"))
         ai_layout.addRow(path_layout)
 
-        # Nueva fila para emociones
         self.lbl_emotions = QLabel()
         self.lbl_emotions.setWordWrap(True)
         self.lbl_emotions.setStyleSheet("color: #ccc; font-size: 11px;")
