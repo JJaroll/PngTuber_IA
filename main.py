@@ -380,9 +380,10 @@ class PNGTuberApp(QMainWindow):
             ("happy", "😄", "Feliz"),
             ("sad", "😢", "Triste"),
             ("angry", "😠", "Enojado"),
-            ("surprise", "😲", "Sorpresa"),
-            ("disgust", "🤢", "Asco"),    
-            ("fear", "😨", "Miedo")
+            ("fear", "😨", "Miedo"),
+            ("disgust", "🤢", "Asco"), 
+            ("surprise", "😲", "Sorpresa")   
+            
         ]
 
         base_style = """
@@ -603,19 +604,11 @@ class PNGTuberApp(QMainWindow):
 
             final_state = None
             
-            if target_state in supported_states:
+            # Permitir Override Manual: Si el usuario usa un hotkey, forzamos el estado aunque el modelo no lo soporte
+            if target_state:
                 final_state = target_state
-            else:
-                # 3. Fallback si el modelo no soporta la emoción
-                fallback_map = {
-                    "fear": "sad",
-                    "disgust": "angry",
-                    "surprise": "happy"
-                }
-                fallback = fallback_map.get(target_state)
-                if fallback and fallback in supported_states:
-                    print(f"⚠️ Emoción '{target_state}' no soportada por '{current_model_key}'. Usando fallback: '{fallback}'")
-                    final_state = fallback
+                if target_state not in supported_states:
+                     print(f"⚠️ Emoción '{target_state}' no soportada por '{current_model_key}', pero forzada por usuario.")
 
             # 4. Aplicar cambio
             if final_state:
