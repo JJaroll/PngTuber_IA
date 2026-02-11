@@ -1,8 +1,23 @@
+"""
+PNGTuber IA
+-----------
+Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
+
+Desarrollado por: JJaroll
+GitHub: https://github.com/JJaroll
+Fecha: 10/02/2026
+Licencia: MIT
+"""
+
+__author__ = "JJaroll"
+__version__ = "1.0.0"
+__maintainer__ = "JJaroll"
+__status__ = "Production"
+
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QSizePolicy
 from PyQt6.QtCore import Qt, pyqtSignal
 
 class MacWindowControls(QWidget):
-    # Señales para que la ventana principal sepa qué hacer
     close_signal = pyqtSignal()
     minimize_signal = pyqtSignal()
     maximize_signal = pyqtSignal()
@@ -10,17 +25,12 @@ class MacWindowControls(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         
-        # Configuración del contenedor para que se ajuste al contenido
         self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         
         layout = QHBoxLayout(self)
-        # Márgenes nativos aproximados de macOS (Top, Left, Bottom, Right)
-        # Se ajustan para que queden en la esquina superior izquierda
         layout.setContentsMargins(8, 8, 8, 8) 
-        layout.setSpacing(8) # Espacio entre los botones
+        layout.setSpacing(8)
 
-        # --- Estilo Base Común ---
-        # Define el tamaño, la forma redonda, y oculta el texto por defecto
         base_style = """
             QPushButton {
                 border: none;
@@ -69,7 +79,7 @@ class MacWindowControls(QWidget):
         layout.addWidget(self.btn_minimize)
 
         # --- Botón Maximizar/Zoom (Verde) ---
-        # Símbolo: '+' (Plus Sign) - En Mac a veces son flechas, pero + es estándar para zoom
+        # Símbolo: '+' (Plus Sign)
         self.btn_maximize = QPushButton("+")
         self.btn_maximize.setToolTip("Zoom / Pantalla Completa")
         self.btn_maximize.setStyleSheet(base_style + """
@@ -79,13 +89,12 @@ class MacWindowControls(QWidget):
         self.btn_maximize.clicked.connect(self.maximize_signal.emit)
         layout.addWidget(self.btn_maximize)
 
-# Pequeña prueba individual para verificar cómo se ve
 if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication
     import sys
     app = QApplication(sys.argv)
     win = QWidget()
-    win.setStyleSheet("background-color: #333;") # Fondo oscuro para probar
+    win.setStyleSheet("background-color: #333;")
     l = QHBoxLayout(win)
     controls = MacWindowControls()
     l.addWidget(controls)
