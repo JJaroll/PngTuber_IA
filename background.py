@@ -1,3 +1,19 @@
+"""
+PNGTuber IA
+-----------
+Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
+
+Desarrollado por: JJaroll
+GitHub: https://github.com/JJaroll
+Fecha: 10/02/2026
+Licencia: MIT
+"""
+
+__author__ = "JJaroll"
+__version__ = "1.0.0"
+__maintainer__ = "JJaroll"
+__status__ = "Production"
+
 import os
 from PyQt6.QtWidgets import QMenu, QWidget, QVBoxLayout, QLabel, QSlider, QWidgetAction, QFileDialog, QMessageBox
 from PyQt6.QtGui import QAction
@@ -25,7 +41,7 @@ class BackgroundManager:
         # 2. SUBMENÚ: APARIENCIA / FONDO
         bg_menu = menu.addMenu("🎨 Fondo / Background")
         
-        # Opciones en el orden solicitado
+        # Opciones de apariencias
         actions = [
             ("Transparente", "transparent"),
             ("Semitransparente", "rgba(0, 0, 0, 100)"),
@@ -43,7 +59,7 @@ class BackgroundManager:
 
         bg_menu.addSeparator()
 
-        # Opción de Sombra (útil tenerla a mano)
+        # Opción de Sombra
         shadow_action = QAction("Sombra / Shadow", self.main_window)
         shadow_action.setCheckable(True)
         shadow_action.setChecked(self.main_window.shadow_enabled)
@@ -53,14 +69,14 @@ class BackgroundManager:
         # 3. SUBMENÚ: SKINS (Solo Lista)
         skin_menu = menu.addMenu("👕 Skins / Avatares")
         
-        # Solo listamos los perfiles, sin herramientas de edición
+        # Lista de perfiles
         self.profile_manager.scan_profiles()
         for profile in self.profile_manager.profiles:
             action = QAction(profile, self.main_window)
             if profile == self.profile_manager.current_profile:
                 action.setCheckable(True)
                 action.setChecked(True)
-                # Ponemos el activo en negrita o destacado visualmente si el estilo lo permite
+                # Resaltamos el perfil actual
                 f = action.font()
                 f.setBold(True)
                 action.setFont(f)
@@ -81,7 +97,6 @@ class BackgroundManager:
         menu.addSeparator()
 
         # 5. ACCESO A CONFIGURACIÓN COMPLETA
-        # Es buena práctica dejar un enlace a la ventana completa por si el usuario está acostumbrado al clic derecho
         settings_action = QAction("⚙️ Abrir Configuración...", self.main_window)
         settings_action.triggered.connect(self.main_window.open_settings_window)
         menu.addAction(settings_action)
@@ -104,13 +119,8 @@ class BackgroundManager:
         self.profile_manager.set_profile(profile_name)
         self.main_window.update_avatar()
         self.config_manager.set("current_profile", profile_name)
-
-    # Funciones de utilidad (export/import) necesarias para settings_window.py
-    # Aunque no se usen en el menú contextual, se mantienen aquí porque settings_window las llama a través de bg_manager
     
     def open_creator(self):
-        # Importación diferida para evitar ciclos si fuera necesario, 
-        # aunque en este caso settings_window ya depende de esto.
         from profile_creator import ProfileCreatorDialog
         dialog = ProfileCreatorDialog(self.main_window)
         if dialog.exec():
@@ -124,14 +134,6 @@ class BackgroundManager:
             # Si estamos editando el perfil actual, forzar actualización visual
             if self.profile_manager.current_profile == profile_name:
                 self.main_window.update_avatar()
-
-    def open_hotkey_config(self):
-        # Esta función ya no se usa desde el menú, pero si settings_window la llamara (aunque ahora tiene su propia pestaña)
-        # la dejamos por compatibilidad o la podemos borrar si settings_window ya no la usa.
-        # (Nota: settings_window ahora incrusta la tabla, así que esto es legacy, pero no hace daño dejarlo por seguridad)
-        from hotkey_gui import HotkeyConfigDialog
-        dialog = HotkeyConfigDialog(self.main_window)
-        dialog.exec()
 
     def import_skin_dialog(self):
         path, _ = QFileDialog.getOpenFileName(self.main_window, "Importar Skin (.ptuber)", "", "PNGTuber Profile (*.ptuber)")
