@@ -1,3 +1,19 @@
+"""
+PNGTuber IA
+-----------
+Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
+
+Desarrollado por: JJaroll
+GitHub: https://github.com/JJaroll
+Fecha: 10/02/2026
+Licencia: MIT
+"""
+
+__author__ = "JJaroll"
+__version__ = "1.0.0"
+__maintainer__ = "JJaroll"
+__status__ = "Production"
+
 from PyQt6.QtWidgets import QWidget, QDialog, QVBoxLayout, QLabel
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QFont
 from PyQt6.QtCore import Qt, QRect, QPoint
@@ -5,8 +21,8 @@ from PyQt6.QtCore import Qt, QRect, QPoint
 class PillProgressBar(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedHeight(12)  # Altura fija
-        self.setMinimumWidth(100) # Ancho mínimo
+        self.setFixedHeight(12)  
+        self.setMinimumWidth(100) 
         
         self._value = 0
         self._color = QColor("#00E64D")
@@ -112,8 +128,5 @@ class DownloadDialog(QDialog):
 
         # Barra de progreso indeterminada
         self.progress = PillProgressBar()
-        # PillProgressBar ya no soporta setRange(0,0) explícitamente para animación indeterminada en la versión actual,
-        # pero podemos simularlo o simplemente mostrarla vacía/llena.
-        # Por ahora la mostramos al 50% fija o implementamos un timer aquí si queremos animación.
         self.progress.setValue(50) 
         layout.addWidget(self.progress)
