@@ -21,7 +21,7 @@
     },
     "mic_sensitivity": 2.2,
     "audio_threshold": 0.024,
-    "tutorial_completed": true,
+    "tutorial_completed": false,
     "ai_model": "spanish",
-    "check_updates": false
+    "check_updates": true
 }
