@@ -1,3 +1,19 @@
+"""
+PNGTuber IA
+-----------
+Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
+
+Desarrollado por: JJaroll
+GitHub: https://github.com/JJaroll
+Fecha: 10/02/2026
+Licencia: MIT
+"""
+
+__author__ = "JJaroll"
+__version__ = "1.0.0"
+__maintainer__ = "JJaroll"
+__status__ = "Production"
+
 import sys
 import numpy as np
 from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout, 
@@ -100,7 +116,7 @@ class PNGTuberApp(QMainWindow):
     def init_ui(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.resize(500, 500) # Un poco más grande para que quepa el dock
+        self.resize(500, 500) 
 
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -109,7 +125,7 @@ class PNGTuberApp(QMainWindow):
 
         # --- BARRA SUPERIOR (Mac Style + Update Badge) ---
         top_bar = QHBoxLayout()
-        top_bar.setContentsMargins(13, 13, 13, 0) # Margen derecho agregado (13)
+        top_bar.setContentsMargins(13, 13, 13, 0) 
         
         # 1. Controles Mac (Izquierda)
         self.mac_controls = MacWindowControls(self)
@@ -120,9 +136,9 @@ class PNGTuberApp(QMainWindow):
         # 2. Espacio flexible
         top_bar.addStretch()
 
-        # 3. Botón de Actualización (Derecha - Oculto por defecto)
+        # 3. Botón de Actualización 
         self.update_btn = QPushButton("⬇️  Update Available")
-        self.update_btn.setVisible(False) # Oculto hasta que haya update
+        self.update_btn.setVisible(False) 
         self.update_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.update_btn.setFixedHeight(24)
         
@@ -222,17 +238,16 @@ class PNGTuberApp(QMainWindow):
 
         # --- GRUPO 2: EMOCIONES (Derecha) ---
         # 1. Lista de Emociones PRINCIPALES (Siempre visibles)
-        self.emotions_layout = QHBoxLayout() # Layout específico para botones
+        self.emotions_layout = QHBoxLayout() 
         self.emotions_layout.setSpacing(10)
-        bottom_layout.addLayout(self.emotions_layout) # Añadirlo al layout principal del dock
+        bottom_layout.addLayout(self.emotions_layout) 
 
 
 
         # 2. Botón de EXPANDIR (Flecha)
-        self.expand_btn = QPushButton("›") # Usamos un carácter chevron para estilo
-        self.expand_btn.setFixedSize(24, 36) # Un poco más estrecho
+        self.expand_btn = QPushButton("›")
+        self.expand_btn.setFixedSize(24, 36) 
         self.expand_btn.setToolTip("Ver más emociones")
-        # Estilo ligeramente diferente para distinguirlo (letra más grande y negrita)
         self.expand_btn.setStyleSheet("""
             QPushButton { 
                 background-color: rgba(255,255,255,50); 
@@ -264,7 +279,6 @@ class PNGTuberApp(QMainWindow):
             btn.setStyleSheet(btn_style)
             btn.clicked.connect(lambda _, a=action: self.handle_hotkey(a))
             
-            # MAGIA AQUÍ: Los agregamos al layout pero los ocultamos
             bottom_layout.addWidget(btn)
             btn.setVisible(False) 
             self.extra_emotion_btns.append(btn)
@@ -272,7 +286,7 @@ class PNGTuberApp(QMainWindow):
         # --- GRUPO 3: VOLUMEN (Extremo Derecha) ---
         self.volume_bar = PillProgressBar()
         self.volume_bar.setFixedWidth(100)
-        self.volume_bar._bg_color = QColor("#000000") # Fondo negro para combinar con el dock
+        self.volume_bar._bg_color = QColor("#000000") 
         bottom_layout.addWidget(self.volume_bar)
         
         # Añadir dock al layout principal centrado
@@ -389,7 +403,7 @@ class PNGTuberApp(QMainWindow):
         self.is_flipped = not self.is_flipped
         self.update_avatar()
 
-    # --- NUEVO: ABRIR AJUSTES ---
+    # --- ABRIR AJUSTES ---
     def open_settings_window(self):
         dialog = SettingsDialog(self)
         dialog.exec()
@@ -482,8 +496,7 @@ class PNGTuberApp(QMainWindow):
             if path and isinstance(path, str):
                 pix = QPixmap(path)
             
-            # --- PROTECCIÓN FINAL: GENERACIÓN EN MEMORIA ---
-            # Si no hay imagen válida, generamos el aviso visual
+            # --- GENERACIÓN EN MEMORIA ---
             if not pix or pix.isNull():
                 pix = QPixmap(200, 200)
                 pix.fill(QColor("transparent"))
@@ -514,7 +527,6 @@ class PNGTuberApp(QMainWindow):
                 
         except Exception as e:
             print(f"⚠️ Error controlado en update_avatar: {e}")
-            # No hacemos nada más, así la app sigue viva
    
     # --- SEÑALES ---
     def handle_audio(self, chunk):
@@ -682,15 +694,9 @@ class PNGTuberApp(QMainWindow):
             self.download_dialog.close()
         
         if success:
-            # Mensaje de éxito opcional (quizás no quieras mostrarlo en el primer arranque para ser más fluido)
-            # QMessageBox.information(self, "Descarga Completada", "Modelo listo.")
-            
-            # Guardamos config
+            QMessageBox.information(self, "Descarga Completada", "Modelo listo.") 
             self.config_manager.set("ai_model", model_key)
-            
-            # --- CAMBIO: INICIAR EL SISTEMA ---
             self.start_emotion_system(model_key)
-            # ----------------------------------
         else:
             QMessageBox.critical(self, "Error Fatal", f"No se pudo descargar el modelo de IA.\nLa aplicación no detectará emociones.\nError: {msg}")
 
@@ -756,7 +762,7 @@ class PNGTuberApp(QMainWindow):
              self.stop_threads()
              event.accept()
         elif self.tray_icon.isVisible():
-            # Solo mostrar el mensaje si el tutorial NO está completado (y solo una vez por sesión)
+            # Solo mostrar el mensaje si el tutorial NO está completado 
             tutorial_done = self.config_manager.get("tutorial_completed", False)
             
             if not tutorial_done and not self.tray_message_shown:
@@ -775,7 +781,7 @@ class PNGTuberApp(QMainWindow):
         self.audio_thread.stop()
         if self.emotion_thread:
             self.emotion_thread.stop()
-        if self.update_checker: # Si existe
+        if self.update_checker: 
              self.update_checker.terminate()
     
     def quit_application(self):
@@ -814,9 +820,6 @@ class PNGTuberApp(QMainWindow):
 
     def init_system_tray(self):
         self.tray_icon = QSystemTrayIcon(self)
-        
-        # Icono por defecto (usamos un emoji o lo que sea, idealmente debería ser un .ico/.png)
-        # Como no tenemos un icono fijo, usaremos un pixmap generado o el avatar actual si es posible
         pixmap = QPixmap(32, 32)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)
@@ -844,7 +847,6 @@ class PNGTuberApp(QMainWindow):
         mute_action.setCheckable(True)
         mute_action.setChecked(self.is_muted)
         mute_action.triggered.connect(lambda c: self.set_muted(c))
-        # Sincronizar estado visual del menú con el botón
         self.mute_btn.clicked.connect(lambda: mute_action.setChecked(self.is_muted))
         tray_menu.addAction(mute_action)
 
@@ -852,9 +854,6 @@ class PNGTuberApp(QMainWindow):
         ai_action.setCheckable(True)
         ai_action.setChecked(self.ai_mode)
         ai_action.triggered.connect(self.toggle_ai_mode_tray)
-        # Sincronizar
-        # Nota: Sincronizar bi-direccionalmente es complejo sin señales dedicadas, 
-        # pero para este caso simple lo dejamos así.
         tray_menu.addAction(ai_action)
 
         tray_menu.addSeparator()
@@ -916,7 +915,26 @@ class PNGTuberApp(QMainWindow):
             if hasattr(self, 'pending_update_url'):
                 QDesktopServices.openUrl(QUrl(self.pending_update_url))
 
+def print_signature():
+    signature = """
+    ╔══════════════════════════════════════════════════════════════════════╗
+    ║                                                                      ║
+    ║      ██╗     ██╗  █████╗ ██████╗  ██████╗ ██╗     ██╗                ║
+    ║      ██║     ██║ ██╔══██╗██╔══██╗██╔═══██╗██║     ██║                ║
+    ║      ██║     ██║ ███████║██████╔╝██║   ██║██║     ██║                ║
+    ║ ██╗  ██║██╗  ██║ ██╔══██║██╔══██╗██║   ██║██║     ██║                ║
+    ║ ╚█████╔╝╚█████╔╝ ██║  ██║██║  ██║╚██████╔╝███████╗███████╗           ║
+    ║  ╚════╝  ╚════╝  ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝           ║
+    ║                                                                      ║
+    ║   PNGTuber IA v1.0.0 - "Dando vida a los píxeles."                   ║
+    ║   GitHub: github.com/JJaroll                                         ║
+    ║                                                                      ║
+    ╚══════════════════════════════════════════════════════════════════════╝
+    """
+    print(signature)
+
 if __name__ == "__main__":
+    print_signature()
     app = QApplication(sys.argv)
     # Importante para que no se cierre al cerrar la ventana si el tray está activo
     app.setQuitOnLastWindowClosed(False) 
