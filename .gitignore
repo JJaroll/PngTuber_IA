@@ -3,36 +3,19 @@ __pycache__/
 .DS_StorepngtuberIA/
 .DS_Store
 __pycache__/
-# --- Python & Entorno Virtual ---
-__pycache__/
 *.py[cod]
 *$py.class
 venv/
 env/
 .env
-
-# --- Configuración de Usuario (Importante no subir esto) ---
 settings.json
-
-# --- Archivos Basura del Sistema Operativo ---
 .DS_Store
 Thumbs.db
-
-# --- Avatares (Opción A: Repositorio Ligero) ---
-# Ignoramos TODA la carpeta de avatares.
-# El programa generará 'avatars/Default' automáticamente al arrancar.
 avatars/
-
-# --- Modelos de IA y Caché ---
-# Evitamos subir modelos pesados (HuggingFace cache)
 models/
 hf_cache/
 .cache/
-
-# --- Paquetes de Skin Exportados ---
 *.ptuber
-
-# --- IDEs y Editores ---
 .idea/
 .vscode/
 *.swp
