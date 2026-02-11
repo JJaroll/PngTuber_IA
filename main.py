@@ -15,11 +15,11 @@ from background import BackgroundManager
 from mac_gui import MacWindowControls
 from config_manager import ConfigManager
 from hotkey_manager import HotkeyManager
-from core_systems import AudioMonitorThread, EmotionThread
+from core_systems import AudioMonitorThread, EmotionThread, SUPPORTED_MODELS, ModelDownloaderThread, is_model_cached
 
 # Nuevos componentes creados recientemente
 from settings_window import SettingsDialog
-from ui_components import PillProgressBar 
+from ui_components import PillProgressBar, DownloadDialog 
 
 CURRENT_VERSION = "1.0.0"
 UPDATE_URL = "https://pastebin.com/raw/xux8fcwt" # Placeholder
@@ -94,6 +94,7 @@ class PNGTuberApp(QMainWindow):
         # 1. Cargar Configuración
         self.config_manager = ConfigManager()
         self.config = self.config_manager.load_config()
+        self.current_version = CURRENT_VERSION
 
         # Variables de Estado
         self.current_emotion = "neutral"
@@ -126,14 +127,14 @@ class PNGTuberApp(QMainWindow):
         self.audio_thread.audio_data_signal.connect(self.handle_audio)
         self.audio_thread.start()
 
-        self.emotion_thread = EmotionThread()
-        self.emotion_thread.emotion_signal.connect(self.update_emotion)
-        self.emotion_thread.start()
+        self.emotion_thread = None # Inicializamos en None
+        QTimer.singleShot(100, self.check_initial_model) # Chequeo diferido para no bloquear UI
 
         # 5. Update Checker
-        self.update_checker = UpdateChecker()   
-        self.update_checker.update_available.connect(self.on_update_found) 
-        self.update_checker.start()
+        if self.config_manager.get("check_updates", True):
+            self.update_checker = UpdateChecker()   
+            self.update_checker.update_available.connect(self.on_update_found) 
+            self.update_checker.start()
 
         #Rebote
         self.bounce_timer = QTimer()
@@ -281,20 +282,11 @@ class PNGTuberApp(QMainWindow):
 
         # --- GRUPO 2: EMOCIONES (Derecha) ---
         # 1. Lista de Emociones PRINCIPALES (Siempre visibles)
-        primary_buttons = [
-            ("🤖", "ai_mode", "Modo IA"),
-            ("😐", "neutral", "Neutral"),
-            ("😄", "happiness", "Feliz"),
-            ("😢", "sadness", "Triste")
-        ]
+        self.emotions_layout = QHBoxLayout() # Layout específico para botones
+        self.emotions_layout.setSpacing(10)
+        bottom_layout.addLayout(self.emotions_layout) # Añadirlo al layout principal del dock
 
-        for icon, action, tooltip in primary_buttons:
-            btn = QPushButton(icon)
-            btn.setFixedSize(36, 36)
-            btn.setToolTip(tooltip)
-            btn.setStyleSheet(btn_style)
-            btn.clicked.connect(lambda _, a=action: self.handle_hotkey(a))
-            bottom_layout.addWidget(btn)
+
 
         # 2. Botón de EXPANDIR (Flecha)
         self.expand_btn = QPushButton("›") # Usamos un carácter chevron para estilo
@@ -367,6 +359,89 @@ class PNGTuberApp(QMainWindow):
         # Gestor de Fondo
         self.bg_manager = BackgroundManager(self, self.profile_manager, self.config_manager)
         self.bg_manager.change_background(self.current_background)
+
+    def update_dock_buttons(self):
+        # 1. Limpiar botones anteriores
+        while self.emotions_layout.count():
+            item = self.emotions_layout.takeAt(0)
+            widget = item.widget()
+            if widget: widget.deleteLater()
+
+        # 2. Inicializar lista de botones extra
+        self.extra_emotion_btns = []
+
+        # 3. Datos del modelo
+        current_model_key = self.config_manager.get("ai_model", "spanish")
+        supported_states = set(SUPPORTED_MODELS[current_model_key]["avatar_states"])
+
+        # 4. Lista MAESTRA de emociones
+        master_emotions = [
+            ("neutral", "😐", "Neutral"),
+            ("happy", "😄", "Feliz"),
+            ("sad", "😢", "Triste"),
+            ("angry", "😠", "Enojado"),
+            ("surprise", "😲", "Sorpresa"),
+            ("disgust", "🤢", "Asco"),    
+            ("fear", "😨", "Miedo")
+        ]
+
+        base_style = """
+            QPushButton { 
+                background-color: rgba(255,255,255,200); 
+                border-radius: 18px; 
+                border: none;
+                font-size: 16px;
+            } 
+            QPushButton:hover { background-color: rgba(255,255,255,255); }
+        """
+        
+        disabled_style = """
+            QPushButton { 
+                background-color: rgba(60,60,60,150); 
+                border-radius: 18px; 
+                border: none;
+                font-size: 16px;
+                color: rgba(255,255,255,50);
+            } 
+        """
+
+        # 5. Botón Modo IA
+        btn_ai = QPushButton("🤖")
+        btn_ai.setFixedSize(36, 36)
+        btn_ai.setToolTip("Modo Automático")
+        btn_ai.setStyleSheet(base_style)
+        btn_ai.clicked.connect(lambda: self.handle_hotkey("ai_mode"))
+        self.emotions_layout.addWidget(btn_ai)
+
+        # 6. Generar botones
+        for state, icon, name in master_emotions:
+            btn = QPushButton(icon)
+            btn.setFixedSize(36, 36)
+            
+            # Usamos lambda con state=state
+            btn.clicked.connect(lambda _, s=state: self.handle_hotkey(s))
+            
+            if state in supported_states:
+                # Soportado -> Visible en barra principal
+                btn.setEnabled(True)
+                btn.setToolTip(name)
+                btn.setStyleSheet(base_style)
+                self.emotions_layout.addWidget(btn)
+            else:
+                # No soportado -> Oculto (Colapsado) y deshabilitado
+                btn.setEnabled(False)
+                btn.setToolTip(f"{name} (No disponible en {current_model_key})")
+                btn.setStyleSheet(disabled_style)
+                btn.setVisible(False) # Oculto por defecto
+                self.emotions_layout.addWidget(btn)
+                self.extra_emotion_btns.append(btn)
+        
+        # 7. Actualizar visibilidad del botón de expansión
+        if hasattr(self, 'expand_btn'):
+            self.expand_btn.setVisible(len(self.extra_emotion_btns) > 0)
+            # Resetear estado del botón (flecha cerrada)
+            self.expand_btn.setText("›")
+            self.expand_btn.setToolTip("Ver emociones no disponibles")
 
     # --- LÓGICA DE FLIP ---
     def toggle_flip(self):
@@ -462,7 +537,10 @@ class PNGTuberApp(QMainWindow):
     # --- SEÑALES ---
     def handle_audio(self, chunk):
         if not self.is_muted:
-            self.emotion_thread.add_audio(chunk)
+            # Enviar audio al hilo de emociones si está activo y NO es None
+            if self.ai_mode and self.emotion_thread is not None:
+                 self.emotion_thread.add_audio(chunk)
+
             try:
                 rms = np.sqrt(np.mean(chunk**2))
                 level = int(rms * 500) 
@@ -501,22 +579,52 @@ class PNGTuberApp(QMainWindow):
             self.set_muted(not self.is_muted)
         elif action == "ai_mode":
             self.ai_mode = True
-            print("🤖 Modo IA Activado")
-        elif action in ["neutral", "happiness", "anger", "sadness", "fear", "disgust"]:
-            self.ai_mode = False
-
-            manual_map = {
-                "neutral": "neutral",
-                "happiness": "happy",
-                "anger": "angry", 
-                "sadness": "sad",
-                "fear": "sad", 
-                "disgust": "angry"
-            }
-            target_emo = manual_map.get(action, "neutral")
-            self.current_emotion = target_emo
+            self.current_emotion = "neutral"
             self.update_avatar()
-            print(f"🛑 Modo Manual: {action} -> {target_emo}")
+            print("🤖 Modo IA Activado")
+        else:
+            # Lógica dinámica para emociones
+            
+            # 1. Normalizar alias (Legacy hotkeys -> Estado avatar)
+            alias_map = {
+                "happiness": "happy",
+                "sadness": "sad",
+                "anger": "angry", 
+                "neutral": "neutral",
+                "fear": "fear",
+                "disgust": "disgust",
+                "surprise": "surprise"
+            }
+            target_state = alias_map.get(action, action)
+
+            # 2. Verificar soporte en modelo actual
+            current_model_key = self.config_manager.get("ai_model", "spanish")
+            supported_states = SUPPORTED_MODELS[current_model_key]["avatar_states"]
+
+            final_state = None
+            
+            if target_state in supported_states:
+                final_state = target_state
+            else:
+                # 3. Fallback si el modelo no soporta la emoción
+                fallback_map = {
+                    "fear": "sad",
+                    "disgust": "angry",
+                    "surprise": "happy"
+                }
+                fallback = fallback_map.get(target_state)
+                if fallback and fallback in supported_states:
+                    print(f"⚠️ Emoción '{target_state}' no soportada por '{current_model_key}'. Usando fallback: '{fallback}'")
+                    final_state = fallback
+
+            # 4. Aplicar cambio
+            if final_state:
+                self.ai_mode = False # Desactivar IA al usar manual
+                self.current_emotion = final_state
+                self.update_avatar()
+                print(f"🛑 Modo Manual: {final_state}")
+            else:
+                print(f"❌ Acción desconocida o no soportada: {action}")
 
     # --- SETTERS ---
     def set_microphone(self, index):
@@ -528,6 +636,74 @@ class PNGTuberApp(QMainWindow):
         self.mic_sensitivity = value
         self.audio_thread.set_sensitivity(value)
         self.config_manager.set("mic_sensitivity", value)
+
+    def check_initial_model(self):
+        """Verifica si el modelo configurado existe al arrancar"""
+        current_model_key = self.config_manager.get("ai_model", "spanish")
+        model_config = SUPPORTED_MODELS.get(current_model_key, SUPPORTED_MODELS["spanish"])
+        
+        # Si el modelo no está en caché, forzamos la descarga con ventana visual
+        if not is_model_cached(model_config["id"]):
+            print("🚀 Primera ejecución detectada: Descargando modelo...")
+            self.start_model_download(current_model_key, model_config["name"], model_config["id"])
+        else:
+            # Si ya existe, iniciamos la IA normalmente
+            self.start_emotion_system(current_model_key)
+
+    def start_emotion_system(self, model_key):
+        """Inicia el hilo de emociones una vez que estamos seguros que el modelo existe"""
+        if self.emotion_thread is not None:
+            self.emotion_thread.stop()
+            
+        self.emotion_thread = EmotionThread()
+        # Configurar modelo antes de iniciar
+        self.emotion_thread.set_model(model_key)
+        self.emotion_thread.emotion_signal.connect(self.update_emotion)
+        self.emotion_thread.start()
+        print(f"✅ Sistema de emociones iniciado con: {model_key}")
+        self.config_manager.set("ai_model", model_key)
+        self.update_dock_buttons()
+
+    def change_ai_model(self, model_key):
+        """Método público llamado desde settings_window"""
+        model_config = SUPPORTED_MODELS.get(model_key)
+        if not model_config: return
+
+        if is_model_cached(model_config["id"]):
+            self.start_emotion_system(model_key)
+        else:
+            self.start_model_download(model_key, model_config["name"], model_config["id"])
+
+    def start_model_download(self, model_key, model_name, model_id):
+        # Crear y mostrar ventana de diálogo
+        self.download_dialog = DownloadDialog(model_name, self)
+        
+        # Crear hilo de descarga
+        self.downloader = ModelDownloaderThread(model_id)
+        
+        # Conectar señales
+        self.downloader.finished_signal.connect(lambda success, msg: self.on_download_finished(success, msg, model_key))
+        
+        # Iniciar
+        self.downloader.start()
+        self.download_dialog.exec() # Esto bloquea la UI principal hasta que se cierre el diálogo
+
+    def on_download_finished(self, success, msg, model_key):
+        if hasattr(self, 'download_dialog'):
+            self.download_dialog.close()
+        
+        if success:
+            # Mensaje de éxito opcional (quizás no quieras mostrarlo en el primer arranque para ser más fluido)
+            # QMessageBox.information(self, "Descarga Completada", "Modelo listo.")
+            
+            # Guardamos config
+            self.config_manager.set("ai_model", model_key)
+            
+            # --- CAMBIO: INICIAR EL SISTEMA ---
+            self.start_emotion_system(model_key)
+            # ----------------------------------
+        else:
+            QMessageBox.critical(self, "Error Fatal", f"No se pudo descargar el modelo de IA.\nLa aplicación no detectará emociones.\nError: {msg}")
 
     def set_audio_threshold(self, value):
         self.audio_threshold = value

@@ -51,6 +51,12 @@ class ProfileCreatorDialog(QDialog):
             ("Enojado - Abierta", "angry_open"),
             ("Triste - Cerrada", "sad_closed"),
             ("Triste - Abierta", "sad_open"),
+            ("Sorpresa - Cerrada", "surprise_closed"),
+            ("Sorpresa - Abierta", "surprise_open"),
+            ("Asco - Cerrada", "disgust_closed"),
+            ("Asco - Abierta", "disgust_open"),
+            ("Miedo - Cerrada", "fear_closed"),
+            ("Miedo - Abierta", "fear_open"),
         ]
 
         self.labels = {}

@@ -1,11 +1,11 @@
 {
-    "current_profile": "Completo",
-    "bounce_enabled": true,
+    "current_profile": "Default",
+    "bounce_enabled": false,
     "bounce_amplitude": 6,
     "bounce_speed": 0.4,
     "shadow_enabled": true,
     "is_muted": false,
-    "background_color": "rgba(255, 110, 88, 255)",
+    "background_color": "rgba(32, 35, 43, 255)",
     "microphone_index": 1,
     "enable_hotkeys": true,
     "hotkeys": {
@@ -16,9 +16,12 @@
         "fear": "5",
         "happiness": "2",
         "sadness": "3",
-        "anger": "4"
+        "anger": "4",
+        "surprise": "7"
     },
     "mic_sensitivity": 1.6,
     "audio_threshold": 0.028,
-    "tutorial_completed": true
+    "tutorial_completed": true,
+    "ai_model": "english",
+    "check_updates": false
 }

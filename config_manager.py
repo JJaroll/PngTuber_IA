@@ -24,10 +24,12 @@ class ConfigManager(QObject):
                 "fear": "3",
                 "happiness": "4",
                 "sadness": "5",
-                "anger": "6"
+                "anger": "6",
+                "surprise": "7"
             },
             "mic_sensitivity": 1.0,
-            "audio_threshold": 0.02
+            "audio_threshold": 0.02,
+            "check_updates": True
         }
         
         self.config_cache = self.load_config()
@@ -43,7 +45,13 @@ class ConfigManager(QObject):
             with open(self.filepath, "r") as f:
                 data = json.load(f)
                 for key, value in self.default_config.items():
-                    if key not in data: data[key] = value
+                    if key not in data: 
+                        data[key] = value
+                    elif key == "hotkeys" and isinstance(value, dict) and isinstance(data[key], dict):
+                        # Merge de diccionarios para hotkeys
+                        for hk, hv in value.items():
+                            if hk not in data[key]:
+                                data[key][hk] = hv
                 return data
         except: return self.default_config.copy()
 

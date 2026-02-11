@@ -14,6 +14,7 @@ from PyQt6.QtGui import QPixmap, QIcon, QColor, QPainter, QPainterPath
 
 from ui_components import PillProgressBar
 from hotkey_gui import HotkeyRecorderDialog
+from core_systems import SUPPORTED_MODELS, get_model_path
 
 # --- WIDGET PERSONALIZADO: TARJETA DE AVATAR (Sin cambios) ---
 class AvatarCard(QFrame):
@@ -549,10 +550,11 @@ class SettingsDialog(QDialog):
             "fear": "😨 Emoción: Miedo",
             "happiness": "😄 Emoción: Felicidad",
             "sadness": "😢 Emoción: Tristeza",
-            "anger": "😡 Emoción: Enojo"
+            "anger": "😡 Emoción: Enojo",
+            "surprise": "😲 Emoción: Sorpresa"
         }
         
-        order = ["mute_toggle", "ai_mode", "neutral", "happiness", "sadness", "anger", "fear", "disgust"]
+        order = ["mute_toggle", "ai_mode", "neutral", "happiness", "sadness", "anger", "fear", "disgust", "surprise"]
         
         row = 0
         for action in order:
@@ -638,12 +640,95 @@ class SettingsDialog(QDialog):
         self.thres_label.setText(f"{real_val:.3f}")
         self.main_window.set_audio_threshold(real_val)
 
+    def on_model_changed(self, index):
+        key = self.model_combo.currentData()
+        if key:
+            self.main_window.change_ai_model(key)
+            self.update_model_info(key)
+
+    def update_model_info(self, model_key):
+        model_config = SUPPORTED_MODELS.get(model_key)
+        if not model_config: return
+
+        # 1. Rutas
+        if hasattr(self, 'lbl_model_path'):
+            path = get_model_path(model_config["id"])
+            if path:
+                self.lbl_model_path.setText(f"📂 {path}")
+                self.lbl_model_path.setToolTip(path)
+                self.btn_open_model.setEnabled(True)
+                self.current_model_path = path
+            else:
+                self.lbl_model_path.setText("⚠️ Modelo no descargado")
+                self.btn_open_model.setEnabled(False)
+                self.current_model_path = None
+
+        # 2. Emociones
+        if hasattr(self, 'lbl_emotions'):
+            emotions = ", ".join(model_config["avatar_states"])
+            self.lbl_emotions.setText(f"Emociones: {emotions}")
+
+    def open_model_folder(self):
+        if hasattr(self, 'current_model_path') and self.current_model_path:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(self.current_model_path))
+
     # --- PESTAÑA SISTEMA ---
     def create_system_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
+
+        ai_group = QGroupBox("Configuración de IA")
+        ai_layout = QFormLayout()
+        
+        self.model_combo = QComboBox()
+        current_model = self.main_window.config_manager.get("ai_model", "spanish")
+        
+        for key, config in SUPPORTED_MODELS.items():
+            self.model_combo.addItem(f"{config['name']}", key)
+            if key == current_model:
+                self.model_combo.setCurrentIndex(self.model_combo.count() - 1)
+        
+        self.model_combo.setMinimumWidth(400)
+        
+        self.model_combo.currentIndexChanged.connect(self.on_model_changed)
+        
+        ai_layout.addRow("Modelo de Voz:", self.model_combo)
+        lbl_info = QLabel("Nota: Cambiar el modelo puede requerir una descarga adicional (300MB - 1.2GB).")
+        lbl_info.setStyleSheet("color: #777; font-size: 11px; font-style: italic;")
+        ai_layout.addRow("", lbl_info)
+
+        self.lbl_model_path = QLabel("Cargando ruta...")
+        self.lbl_model_path.setStyleSheet("color: #aaa; font-family: monospace; font-size: 10px;")
+        self.lbl_model_path.setWordWrap(True)
+        
+        self.btn_open_model = QPushButton("📂")
+        self.btn_open_model.setFixedSize(30, 30)
+        self.btn_open_model.setToolTip("Abrir en Explorador")
+        self.btn_open_model.clicked.connect(self.open_model_folder)
+        
+        path_layout = QHBoxLayout()
+        path_layout.addWidget(self.lbl_model_path)
+        path_layout.addWidget(self.btn_open_model)
+        
+        # Cambio de layout: Las etiquetas van arriba para dar más espacio
+        ai_layout.addRow(QLabel("Ruta del Modelo:"))
+        ai_layout.addRow(path_layout)
+
+        # Nueva fila para emociones
+        self.lbl_emotions = QLabel()
+        self.lbl_emotions.setWordWrap(True)
+        self.lbl_emotions.setStyleSheet("color: #ccc; font-size: 11px;")
+        
+        ai_layout.addRow(QLabel("Emociones Soportadas:"))
+        ai_layout.addRow(self.lbl_emotions)
+        
+        # Inicializar info con el modelo actual
+        self.update_model_info(current_model)
+        
+        ai_group.setLayout(ai_layout)
+        layout.addWidget(ai_group)
 
         path_group = QGroupBox("Ubicación del Proyecto")
         path_layout = QVBoxLayout()
@@ -662,6 +747,12 @@ class SettingsDialog(QDialog):
 
         size_group = QGroupBox("Almacenamiento")
         size_layout = QFormLayout()
+
+        # Checkbox de actualizaciones
+        self.chk_updates = QCheckBox("Buscar actualizaciones automáticamente al iniciar")
+        self.chk_updates.setChecked(self.main_window.config_manager.get("check_updates", True))
+        self.chk_updates.toggled.connect(lambda v: self.main_window.config_manager.set("check_updates", v))
+        size_layout.addRow("", self.chk_updates)
         
         total_size = 0
         file_count = 0
@@ -713,7 +804,12 @@ class SettingsDialog(QDialog):
         lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(lbl_title)
 
-        lbl_ver = QLabel("Versión 1.1.0")
+        if hasattr(self.main_window, 'current_version'):
+            version_text = f"Versión {self.main_window.current_version}"
+        else:
+            version_text = "Versión: Desconocida"
+
+        lbl_ver = QLabel(version_text)
         lbl_ver.setStyleSheet("color: #888; font-size: 14px;")
         lbl_ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(lbl_ver)

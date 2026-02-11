@@ -3,6 +3,7 @@ import zipfile
 import shutil
 from PyQt6.QtGui import QImage, QColor, QPainter, QBrush
 from PyQt6.QtCore import Qt
+from core_systems import SUPPORTED_MODELS
 
 class AvatarProfileManager:
     def __init__(self, root_folder="avatars"):
@@ -22,8 +23,23 @@ class AvatarProfileManager:
 
         default_path = os.path.join(self.root_folder, "Default")
         
-        # Si no hay perfiles, o si existe Default pero está vacío
-        if not self.profiles or ("Default" in self.profiles and not os.listdir(default_path)):
+        # Verificar si falta ALGÚN archivo en el perfil Default
+        missing_files = False
+        all_possible_states = set()
+        for model in SUPPORTED_MODELS.values():
+            all_possible_states.update(model["avatar_states"])
+            
+        if os.path.exists(default_path):
+            current_files = set(os.listdir(default_path))
+            for state in all_possible_states:
+                if f"{state}_open.PNG" not in current_files or f"{state}_closed.PNG" not in current_files:
+                    missing_files = True
+                    break
+        else:
+            missing_files = True
+
+        # Crea o actualiza si faltan archivos
+        if missing_files:
             self.create_default_skin(default_path)
             if "Default" not in self.profiles:
                 self.profiles.append("Default")
@@ -36,32 +52,44 @@ class AvatarProfileManager:
                 self.current_profile = "Default" # Fallback extremo
 
     def create_default_skin(self, target_dir):
-        """Genera avatares de emergencia (Círculos) si no hay imágenes"""
+        """Genera avatares de emergencia basados en TODOS los modelos posibles"""
         if not os.path.exists(target_dir):
             os.makedirs(target_dir)
             
         print(f"🛠️ Reparando skin en: {target_dir}")
         
-        emotions = {
+        # Colores para estados conocidos
+        colors = {
             "neutral": "#00E64D", # Verde
             "happy": "#FFD700",   # Amarillo
             "sad": "#4169E1",     # Azul
-            "angry": "#FF4500"    # Rojo
+            "angry": "#FF4500",   # Rojo
+            "surprise": "#FF00FF", # Magenta
+            "disgust": "#808000", # Oliva
+            "fear": "#4B0082"     # Indigo
         }
         
+        # Recopilamos TODOS los estados posibles de todos los modelos
+        all_possible_states = set()
+        for model in SUPPORTED_MODELS.values():
+            all_possible_states.update(model["avatar_states"])
+            
         size = 250
-        for emo, color_hex in emotions.items():
+        for state in all_possible_states:
+            color_hex = colors.get(state, "#CCCCCC") # Gris si no tiene color definido
+            
             img = QImage(size, size, QImage.Format.Format_ARGB32)
             img.fill(QColor(0, 0, 0, 0))
             painter = QPainter(img)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            
             painter.setBrush(QBrush(QColor(color_hex)))
             painter.setPen(Qt.PenStyle.NoPen)
             painter.drawEllipse(10, 10, size-20, size-20)
             painter.end()
             
-            img.save(os.path.join(target_dir, f"{emo}_closed.PNG"))
-            img.save(os.path.join(target_dir, f"{emo}_open.PNG"))
+            img.save(os.path.join(target_dir, f"{state}_closed.PNG"))
+            img.save(os.path.join(target_dir, f"{state}_open.PNG"))
 
     def set_profile(self, profile_name):
         if profile_name in self.profiles:
