@@ -1,3 +1,19 @@
+"""
+PNGTuber IA
+-----------
+Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
+
+Desarrollado por: JJaroll
+GitHub: https://github.com/JJaroll
+Fecha: 10/02/2026
+Licencia: MIT
+"""
+
+__author__ = "JJaroll"
+__version__ = "1.0.0"
+__maintainer__ = "JJaroll"
+__status__ = "Production"
+
 import os
 import zipfile
 import shutil
@@ -23,7 +39,7 @@ class AvatarProfileManager:
 
         default_path = os.path.join(self.root_folder, "Default")
         
-        # Verificar si falta ALGÚN archivo en el perfil Default
+        # Verificar si falta algún archivo en el perfil Default
         missing_files = False
         all_possible_states = set()
         for model in SUPPORTED_MODELS.values():
@@ -49,7 +65,7 @@ class AvatarProfileManager:
             if self.profiles:
                 self.current_profile = self.profiles[0]
             else:
-                self.current_profile = "Default" # Fallback extremo
+                self.current_profile = "Default" 
 
     def create_default_skin(self, target_dir):
         """Genera avatares de emergencia basados en TODOS los modelos posibles"""
@@ -69,7 +85,7 @@ class AvatarProfileManager:
             "fear": "#4B0082"     # Indigo
         }
         
-        # Recopilamos TODOS los estados posibles de todos los modelos
+        # Recopilamos todos los estados posibles de todos los modelos
         all_possible_states = set()
         for model in SUPPORTED_MODELS.values():
             all_possible_states.update(model["avatar_states"])
@@ -124,13 +140,13 @@ class AvatarProfileManager:
         full_path = os.path.join(self.root_folder, self.current_profile, filename)
         if is_valid_file(full_path): return full_path
             
-        # 5. Desesperación: Devolver CUALQUIER png real que encuentre
+        # 5. Desesperación: Devolver cualquier png real que encuentre
         skin_dir = os.path.join(self.root_folder, self.current_profile)
         if os.path.exists(skin_dir):
             for f in os.listdir(skin_dir):
                 if f.lower().endswith(".png"):
                     candidate = os.path.join(skin_dir, f)
-                    if os.path.isfile(candidate): # Verificación extra
+                    if os.path.isfile(candidate): 
                         return candidate
         
         # 6. Nada encontrado
