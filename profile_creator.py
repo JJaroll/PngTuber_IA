@@ -1,3 +1,19 @@
+"""
+PNGTuber IA
+-----------
+Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
+
+Desarrollado por: JJaroll
+GitHub: https://github.com/JJaroll
+Fecha: 10/02/2026
+Licencia: MIT
+"""
+
+__author__ = "JJaroll"
+__version__ = "1.0.0"
+__maintainer__ = "JJaroll"
+__status__ = "Production"
+
 import os
 import shutil
 import zipfile
@@ -98,7 +114,7 @@ class ProfileCreatorDialog(QDialog):
         for _, key in self.slots:
             img_path = os.path.join(profile_path, f"{key}.PNG")
             if os.path.exists(img_path):
-                self.selected_files[key] = img_path # Mantenemos la ruta original
+                self.selected_files[key] = img_path 
                 self.labels[key].setText("✅ Actual")
                 self.labels[key].setStyleSheet("color: #00E64D; font-weight: bold;")
 
@@ -111,15 +127,13 @@ class ProfileCreatorDialog(QDialog):
             self.labels[key].setStyleSheet("color: #00E64D; font-weight: bold;")
 
     def save_profile(self):
-        # --- NUEVO: Verificación de límite (Solo si es nuevo) ---
+        # --- Verificación de límite ---
         if not self.edit_mode:
             current_skins = [d for d in os.listdir(self.avatars_dir) if os.path.isdir(os.path.join(self.avatars_dir, d))]
-            # Excluir 'Default' del conteo
             user_skins = [p for p in current_skins if p != "Default"]
             if len(user_skins) >= 12:
                 QMessageBox.warning(self, "Límite Alcanzado", "Has alcanzado el límite de 12 skins. Borra alguno manualmente antes de crear uno nuevo.")
                 return
-        # -------------------------------------
 
         name = self.name_input.text().strip()
         if not name:
@@ -127,15 +141,11 @@ class ProfileCreatorDialog(QDialog):
         
         target_dir = os.path.join(self.avatars_dir, name)
         
-        # Si NO estamos editando, y existe -> Error
         if not self.edit_mode and os.path.exists(target_dir):
             return QMessageBox.warning(self, "Error", "Ya existe un skin con ese nombre.")
 
-        # Validación mínima
         has_neutral = ("neutral_closed" in self.selected_files and "neutral_open" in self.selected_files)
         
-        # En modo edición, podríamos ser más laxos si ya existen, 
-        # pero `selected_files` se llena en `load_existing_images` así que debería estar bien.
         if not has_neutral:
              return QMessageBox.warning(self, "Incompleto", "Debes tener al menos las imágenes 'Neutral' (Abierta y Cerrada).")
 
@@ -156,7 +166,7 @@ class ProfileCreatorDialog(QDialog):
             msg = "Skin actualizado correctamente." if self.edit_mode else f"Skin '{name}' creado correctamente."
             QMessageBox.information(self, "Éxito", msg)
             
-            # Solo preguntar exportar si es nuevo, para no molestar al editar
+            # Solo preguntar exportar si es nuevo
             if not self.edit_mode:
                 reply = QMessageBox.question(
                     self, "Exportar Skin", 
