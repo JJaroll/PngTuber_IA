@@ -756,7 +756,10 @@ class PNGTuberApp(QMainWindow):
              self.stop_threads()
              event.accept()
         elif self.tray_icon.isVisible():
-            if not self.tray_message_shown:
+            # Solo mostrar el mensaje si el tutorial NO está completado (y solo una vez por sesión)
+            tutorial_done = self.config_manager.get("tutorial_completed", False)
+            
+            if not tutorial_done and not self.tray_message_shown:
                 QMessageBox.information(self, "PNGTuber", 
                                         "La aplicación seguirá ejecutándose en la bandeja del sistema.\nPara salir completamente, usa el menú del icono o 'Quit' en el menú de la aplicación.")
                 self.tray_message_shown = True
