@@ -1,3 +1,19 @@
+"""
+PNGTuber IA
+-----------
+Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
+
+Desarrollado por: JJaroll
+GitHub: https://github.com/JJaroll
+Fecha: 10/02/2026
+Licencia: MIT
+"""
+
+__author__ = "JJaroll"
+__version__ = "1.0.0"
+__maintainer__ = "JJaroll"
+__status__ = "Production"
+
 import time
 import threading
 import numpy as np
@@ -41,9 +57,9 @@ SUPPORTED_MODELS = {
     }
 }
 
-# --- NUEVO: Hilo de Descarga ---
+# --- Hilo de Descarga ---
 class ModelDownloaderThread(QThread):
-    finished_signal = pyqtSignal(bool, str) # success, message
+    finished_signal = pyqtSignal(bool, str)
 
     def __init__(self, model_id):
         super().__init__()
@@ -59,16 +75,13 @@ class ModelDownloaderThread(QThread):
             self.finished_signal.emit(False, str(e))
 
 def is_model_cached(model_id):
-    """Verifica si el modelo ya está en caché sin descargarlo"""
     try:
-        # Intentamos buscar localmente, si falla lanza error
         snapshot_download(repo_id=model_id, local_files_only=True)
         return True
     except:
         return False
 
 def get_model_path(model_id):
-    """Devuelve la ruta absoluta del modelo si está en caché"""
     try:
         return snapshot_download(repo_id=model_id, local_files_only=True)
     except:
@@ -87,10 +100,9 @@ class AudioMonitorThread(QThread):
         self.p = pyaudio.PyAudio()
         self.stream = None
         
-        # --- NUEVO: Variables para cambio seguro de hilo ---
+        # Variables para cambio seguro de hilo
         self.pending_device_index = None
         self.trigger_device_change = False
-        # -------------------------------------------------
         
         self.start_stream()
 
@@ -117,8 +129,6 @@ class AudioMonitorThread(QThread):
             self.stream = None
 
     def change_device(self, index):
-        """Solicita el cambio de micrófono de manera segura (flag)"""
-        # En lugar de reiniciar aquí, solo marcamos la solicitud
         self.pending_device_index = index
         self.trigger_device_change = True
 
@@ -129,7 +139,6 @@ class AudioMonitorThread(QThread):
         self.threshold = value
 
     def list_devices(self):
-        """Devuelve la lista de micrófonos para el menú"""
         devices = []
         try:
             info = self.p.get_host_api_info_by_index(0)
@@ -146,7 +155,7 @@ class AudioMonitorThread(QThread):
             # 1. VERIFICAR SI HAY UN CAMBIO PENDIENTE
             if self.trigger_device_change:
                 self.device_index = self.pending_device_index
-                self.start_stream() # El propio hilo reinicia su stream
+                self.start_stream()
                 self.trigger_device_change = False
 
             # 2. LEER AUDIO
@@ -245,11 +254,9 @@ class EmotionThread(QThread):
             pid = torch.argmax(logits, dim=-1).item()
             lbl = str(self.model.config.id2label[pid]).lower()
             
-            # Usar el mapeo del modelo actual
             mapped_emotion = self.map.get(lbl, "neutral")
             self.emotion_signal.emit(mapped_emotion)
         except Exception as e: 
-            # print(f"Error predicción: {e}") 
             pass
 
     def stop(self):
