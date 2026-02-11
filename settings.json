@@ -1,11 +1,11 @@
 {
     "current_profile": "Default",
     "bounce_enabled": false,
-    "bounce_amplitude": 6,
+    "bounce_amplitude": 10,
     "bounce_speed": 0.4,
-    "shadow_enabled": true,
+    "shadow_enabled": false,
     "is_muted": false,
-    "background_color": "rgba(32, 35, 43, 255)",
+    "background_color": "rgba(183, 102, 153, 255)",
     "microphone_index": 1,
     "enable_hotkeys": true,
     "hotkeys": {
@@ -19,8 +19,8 @@
         "anger": "4",
         "surprise": "7"
     },
-    "mic_sensitivity": 1.6,
-    "audio_threshold": 0.028,
+    "mic_sensitivity": 2.2,
+    "audio_threshold": 0.024,
     "tutorial_completed": true,
     "ai_model": "spanish",
     "check_updates": false

@@ -1,13 +1,11 @@
 import sys
-import json
-import urllib.request
 import numpy as np
 from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout, 
                              QWidget, QHBoxLayout, QSizeGrip, QGraphicsDropShadowEffect, 
                              QPushButton, QSizePolicy, QMessageBox)
-from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QUrl, QPoint, QRect
+from PyQt6.QtCore import Qt, QTimer, QUrl, QPoint
 from PyQt6.QtGui import (QPixmap, QPainter, QColor, QTransform, QShortcut, 
-                         QKeySequence, QDesktopServices, QPen, QFont, QBrush, QCursor)
+                         QKeySequence, QDesktopServices, QPen, QFont, QBrush)
 
 # --- IMPORTS LOCALES ---
 from profile_manager import AvatarProfileManager
@@ -16,94 +14,27 @@ from mac_gui import MacWindowControls
 from config_manager import ConfigManager
 from hotkey_manager import HotkeyManager
 from core_systems import AudioMonitorThread, EmotionThread, SUPPORTED_MODELS, ModelDownloaderThread, is_model_cached
-
-# Nuevos componentes creados recientemente
+from update_manager import UpdateChecker, CURRENT_VERSION
 from settings_window import SettingsDialog
-from ui_components import PillProgressBar, DownloadDialog 
-
-CURRENT_VERSION = "1.0.0"
-UPDATE_URL = "https://pastebin.com/raw/xux8fcwt" # Placeholder
-
-class UpdateChecker(QThread):
-    # Modificamos la señal para enviar dos textos: (url, version_nueva)
-    update_available = pyqtSignal(str, str) 
-
-    def run(self):
-        try:
-            req = urllib.request.Request(
-                UPDATE_URL, 
-                headers={'User-Agent': 'Mozilla/5.0'}
-            )
-            with urllib.request.urlopen(req) as response:
-                data = json.loads(response.read().decode())
-                remote_version = data.get("version", "0.0.0")
-                download_url = data.get("url", "")
-                
-                # Comparamos versiones
-                if remote_version > CURRENT_VERSION:
-                    # Emitimos URL y la Versión detectada
-                    self.update_available.emit(download_url, remote_version)
-
-        except Exception as e:
-            print(f"[ERROR] Update check failed: {e}")
-
-class TutorialOverlay(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.parent_window = parent
-        self.setGeometry(parent.rect())
-        self.setVisible(False)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.fillRect(self.rect(), QColor(0, 0, 0, 150))
-        
-        pen = QPen(Qt.GlobalColor.white)
-        pen.setWidth(2)
-        painter.setPen(pen)
-        
-        font_title = QFont("Arial", 16, QFont.Weight.Bold)
-        painter.setFont(font_title)
-        
-        rect = self.rect()
-        center = rect.center()
-        
-        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Flip: Ctrl+F\nClick derecho: Menú")
-        
-        start_arrow = QPoint(center.x(), rect.bottom() - 60)
-        end_arrow = QPoint(center.x(), rect.bottom() - 20)
-        painter.drawLine(start_arrow, end_arrow)
-        
-        painter.setFont(QFont("Arial", 12))
-        painter.drawText(start_arrow.x() - 60, start_arrow.y() - 5, "Controles")
-        
-        painter.setFont(QFont("Arial", 10, QFont.Weight.Normal))
-        painter.drawText(rect.adjusted(0, 0, 0, -50), Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter, "Haz clic para comenzar")
-
-    def mousePressEvent(self, event):
-        if self.parent_window:
-            self.parent_window.mark_tutorial_completed()
-        self.close()
-        self.deleteLater()
+from ui_components import PillProgressBar, DownloadDialog, TutorialOverlay
 
 class PNGTuberApp(QMainWindow):
     def __init__(self):
         super().__init__()
         
-        # 1. Cargar Configuración
+        # Configuración
         self.config_manager = ConfigManager()
         self.config = self.config_manager.load_config()
         self.current_version = CURRENT_VERSION
 
-        # Variables de Estado
+        # Estado
         self.current_emotion = "neutral"
         self.is_speaking = False
         self.is_muted = self.config.get("is_muted", False)
         self.mic_sensitivity = self.config.get("mic_sensitivity", 1.0)
         self.audio_threshold = self.config.get("audio_threshold", 0.02)
         
-        # Configuración Visual
+        # Visual
         self.bounce_enabled = self.config.get("bounce_enabled", True)
         self.bounce_amplitude = self.config.get("bounce_amplitude", 10)
         self.bounce_speed = self.config.get("bounce_speed", 0.3)
@@ -112,36 +43,35 @@ class PNGTuberApp(QMainWindow):
         self.current_background = self.config.get("background_color", "transparent")
         self.is_flipped = False
 
-        # 2. Iniciar Gestores
+        # Gestores
         self.profile_manager = AvatarProfileManager()
         profile_name = self.config.get("current_profile", "Default")
         self.profile_manager.set_profile(profile_name)
 
-        # 3. Interfaz Gráfica
         self.init_ui()
 
-        # 4. Sistemas de Audio e IA
+        # Audio e IA
         saved_mic = self.config.get("microphone_index")
         self.audio_thread = AudioMonitorThread(device_index=saved_mic, threshold=self.audio_threshold, sensitivity=self.mic_sensitivity)
         self.audio_thread.volume_signal.connect(self.update_mouth)
         self.audio_thread.audio_data_signal.connect(self.handle_audio)
         self.audio_thread.start()
 
-        self.emotion_thread = None # Inicializamos en None
-        QTimer.singleShot(100, self.check_initial_model) # Chequeo diferido para no bloquear UI
+        self.emotion_thread = None
+        QTimer.singleShot(100, self.check_initial_model)
 
-        # 5. Update Checker
+        # Update Checker
         if self.config_manager.get("check_updates", True):
             self.update_checker = UpdateChecker()   
             self.update_checker.update_available.connect(self.on_update_found) 
             self.update_checker.start()
 
-        #Rebote
+        # Animación
         self.bounce_timer = QTimer()
         self.bounce_timer.timeout.connect(self.animate_bounce)
         self.bounce_timer.start(30)
  
-        # 6. Gestor de Hotkeys
+        # Hotkeys
         self.ai_mode = True
         self.hotkey_manager = HotkeyManager(self.config_manager)
         self.hotkey_manager.hotkey_triggered.connect(self.handle_hotkey)
@@ -149,11 +79,9 @@ class PNGTuberApp(QMainWindow):
         
         self.update_avatar()
 
-        # Shortcuts
         self.flip_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
         self.flip_shortcut.activated.connect(self.toggle_flip)
 
-        # 7. Tutorial
         if not self.config.get("tutorial_completed", False):
             QTimer.singleShot(500, self.show_tutorial)
 

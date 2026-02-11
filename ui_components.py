@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QDialog, QVBoxLayout, QLabel
-from PyQt6.QtGui import QPainter, QBrush, QColor
-from PyQt6.QtCore import Qt, QRect
+from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QFont
+from PyQt6.QtCore import Qt, QRect, QPoint
 
 class PillProgressBar(QWidget):
     def __init__(self, parent=None):
@@ -44,6 +44,46 @@ class PillProgressBar(QWidget):
             progress_rect = QRect(0, 0, width, rect.height())
             painter.setBrush(QBrush(self._color))
             painter.drawRoundedRect(progress_rect, radius, radius)
+
+class TutorialOverlay(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.setGeometry(parent.rect())
+        self.setVisible(False)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 150))
+        
+        pen = QPen(Qt.GlobalColor.white)
+        pen.setWidth(2)
+        painter.setPen(pen)
+        
+        font_title = QFont("Arial", 16, QFont.Weight.Bold)
+        painter.setFont(font_title)
+        
+        rect = self.rect()
+        center = rect.center()
+        
+        painter.drawText(rect, Qt.AlignmentFlag.AlignCenter, "Flip: Ctrl+F\nClick derecho: Menú")
+        
+        start_arrow = QPoint(center.x(), rect.bottom() - 60)
+        end_arrow = QPoint(center.x(), rect.bottom() - 20)
+        painter.drawLine(start_arrow, end_arrow)
+        
+        painter.setFont(QFont("Arial", 12))
+        painter.drawText(start_arrow.x() - 60, start_arrow.y() - 5, "Controles")
+        
+        painter.setFont(QFont("Arial", 10, QFont.Weight.Normal))
+        painter.drawText(rect.adjusted(0, 0, 0, -50), Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter, "Haz clic para comenzar")
+
+    def mousePressEvent(self, event):
+        if self.parent_window:
+            self.parent_window.mark_tutorial_completed()
+        self.close()
+        self.deleteLater()
 
 # --- CLASE DE DESCARGA ---
 class DownloadDialog(QDialog):
