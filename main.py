@@ -2,10 +2,10 @@ import sys
 import numpy as np
 from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout, 
                              QWidget, QHBoxLayout, QSizeGrip, QGraphicsDropShadowEffect, 
-                             QPushButton, QSizePolicy, QMessageBox)
-from PyQt6.QtCore import Qt, QTimer, QUrl, QPoint
+                             QPushButton, QSizePolicy, QMessageBox, QSystemTrayIcon, QMenu)
+from PyQt6.QtCore import Qt, QTimer, QUrl, QPoint, QPropertyAnimation, QEasingCurve, QSize
 from PyQt6.QtGui import (QPixmap, QPainter, QColor, QTransform, QShortcut, 
-                         QKeySequence, QDesktopServices, QPen, QFont, QBrush)
+                         QKeySequence, QDesktopServices, QPen, QFont, QBrush, QIcon, QAction)
 
 # --- IMPORTS LOCALES ---
 from profile_manager import AvatarProfileManager
@@ -61,6 +61,7 @@ class PNGTuberApp(QMainWindow):
         QTimer.singleShot(100, self.check_initial_model)
 
         # Update Checker
+        self.update_checker = None
         if self.config_manager.get("check_updates", True):
             self.update_checker = UpdateChecker()   
             self.update_checker.update_available.connect(self.on_update_found) 
@@ -79,11 +80,22 @@ class PNGTuberApp(QMainWindow):
         
         self.update_avatar()
 
+        # Timer para animación de "Thinking" (AI Mode)
+        self.ai_pulse_timer = QTimer()
+        self.ai_pulse_timer.timeout.connect(self.animate_ai_pulse)
+        self.ai_pulse_alpha = 0
+        self.ai_pulse_direction = 1
+
         self.flip_shortcut = QShortcut(QKeySequence("Ctrl+F"), self)
         self.flip_shortcut.activated.connect(self.toggle_flip)
 
         if not self.config.get("tutorial_completed", False):
             QTimer.singleShot(500, self.show_tutorial)
+
+        # System Tray
+        self.init_system_tray()
+        self.will_quit = False
+        self.tray_message_shown = False
 
     def init_ui(self):
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
@@ -335,12 +347,12 @@ class PNGTuberApp(QMainWindow):
         """
 
         # 5. Botón Modo IA
-        btn_ai = QPushButton("🤖")
-        btn_ai.setFixedSize(36, 36)
-        btn_ai.setToolTip("Modo Automático")
-        btn_ai.setStyleSheet(base_style)
-        btn_ai.clicked.connect(lambda: self.handle_hotkey("ai_mode"))
-        self.emotions_layout.addWidget(btn_ai)
+        self.btn_ai = QPushButton("🤖")
+        self.btn_ai.setFixedSize(36, 36)
+        self.btn_ai.setToolTip("Modo Automático")
+        self.btn_ai.setStyleSheet(base_style)
+        self.btn_ai.clicked.connect(lambda: self.handle_hotkey("ai_mode"))
+        self.emotions_layout.addWidget(self.btn_ai)
 
         # 6. Generar botones
         for state, icon, name in master_emotions:
@@ -392,19 +404,29 @@ class PNGTuberApp(QMainWindow):
         for btn in self.extra_emotion_btns:
             btn.setVisible(should_show)
             
-        # Cambiar el icono de la flecha y el ancho del dock
+        # Animación de resize suave
+        current_width = self.width()
+        target_width = current_width
+        
+        # Cambiar el icono de la flecha y definir ancho objetivo
         if should_show:
             self.expand_btn.setText("‹") # Flecha izquierda
             self.expand_btn.setToolTip("Menos emociones")
-            # Opcional: Expandir ventana si es necesario
-            if self.width() < 600: 
-                self.resize(600, self.height())
+            if current_width < 600: 
+                target_width = 600
         else:
             self.expand_btn.setText("›") # Flecha derecha
             self.expand_btn.setToolTip("Ver más emociones")
-            # Opcional: Contraer ventana
-            if self.width() > 500:
-                self.resize(500, self.height())
+            if current_width > 500:
+                target_width = 500
+        
+        if target_width != current_width:
+            self.animation = QPropertyAnimation(self, b"size")
+            self.animation.setDuration(300)
+            self.animation.setStartValue(QSize(current_width, self.height()))
+            self.animation.setEndValue(QSize(target_width, self.height()))
+            self.animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+            self.animation.start()
 
     # --- LÓGICA DE ANIMACIÓN ---
     def animate_bounce(self):
@@ -415,6 +437,37 @@ class PNGTuberApp(QMainWindow):
         elif self.bounce_phase != 0:
             self.bounce_phase = 0
             self.avatar_label.setContentsMargins(0, 0, 0, 0)
+
+    def animate_ai_pulse(self):
+        if not self.ai_mode or not hasattr(self, 'btn_ai'):
+            self.ai_pulse_timer.stop()
+            return
+
+        # Animación de respiración (alpha de 0 a 100)
+        self.ai_pulse_alpha += 5 * self.ai_pulse_direction
+        
+        if self.ai_pulse_alpha >= 100:
+            self.ai_pulse_alpha = 100
+            self.ai_pulse_direction = -1
+        elif self.ai_pulse_alpha <= 0:
+            self.ai_pulse_alpha = 0
+            self.ai_pulse_direction = 1
+            
+        # Color azul/morado tipo Gemini
+        glow_color = f"rgba(0, 200, 255, {self.ai_pulse_alpha})"
+        border_color = f"rgba(255, 255, 255, {50 + self.ai_pulse_alpha})"
+        
+        style = f"""
+            QPushButton {{ 
+                background-color: rgba(255,255,255,200); 
+                border-radius: 18px; 
+                border: 2px solid {glow_color};
+                background-color: {border_color};
+                font-size: 16px;
+            }} 
+            QPushButton:hover {{ background-color: rgba(255,255,255,255); }}
+        """
+        self.btn_ai.setStyleSheet(style)
 
     def update_avatar(self):
         try:
@@ -510,6 +563,7 @@ class PNGTuberApp(QMainWindow):
             self.ai_mode = True
             self.current_emotion = "neutral"
             self.update_avatar()
+            self.ai_pulse_timer.start(50)
             print("🤖 Modo IA Activado")
         else:
             # Lógica dinámica para emociones
@@ -541,6 +595,17 @@ class PNGTuberApp(QMainWindow):
             # 4. Aplicar cambio
             if final_state:
                 self.ai_mode = False # Desactivar IA al usar manual
+                self.ai_pulse_timer.stop()
+                if hasattr(self, 'btn_ai'):
+                    self.btn_ai.setStyleSheet("""
+                        QPushButton { 
+                            background-color: rgba(255,255,255,200); 
+                            border-radius: 18px; 
+                            border: none;
+                            font-size: 16px;
+                        } 
+                        QPushButton:hover { background-color: rgba(255,255,255,255); }
+                    """)
                 self.current_emotion = final_state
                 self.update_avatar()
                 print(f"🛑 Modo Manual: {final_state}")
@@ -584,6 +649,9 @@ class PNGTuberApp(QMainWindow):
         print(f"✅ Sistema de emociones iniciado con: {model_key}")
         self.config_manager.set("ai_model", model_key)
         self.update_dock_buttons()
+        # Iniciar animación visual si corresponde
+        if self.ai_mode:
+            self.ai_pulse_timer.start(50)
 
     def change_ai_model(self, model_key):
         """Método público llamado desde settings_window"""
@@ -681,11 +749,36 @@ class PNGTuberApp(QMainWindow):
         QTimer.singleShot(100, lambda: self.resize(self.width() + 1, self.height()))
         QTimer.singleShot(200, lambda: self.resize(self.width() - 1, self.height()))
 
+        QTimer.singleShot(200, lambda: self.resize(self.width() - 1, self.height()))
+
     def closeEvent(self, event):
+        if self.will_quit:
+             self.stop_threads()
+             event.accept()
+        elif self.tray_icon.isVisible():
+            if not self.tray_message_shown:
+                QMessageBox.information(self, "PNGTuber", 
+                                        "La aplicación seguirá ejecutándose en la bandeja del sistema.\nPara salir completamente, usa el menú del icono o 'Quit' en el menú de la aplicación.")
+                self.tray_message_shown = True
+            
+            self.hide()
+            event.ignore()
+        else:
+            self.stop_threads()
+            event.accept()
+
+    def stop_threads(self):
         self.hotkey_manager.stop_listening()
         self.audio_thread.stop()
-        self.emotion_thread.stop()
-        event.accept()
+        if self.emotion_thread:
+            self.emotion_thread.stop()
+        if self.update_checker: # Si existe
+             self.update_checker.terminate()
+    
+    def quit_application(self):
+        self.will_quit = True
+        self.stop_threads()
+        QApplication.quit()
     
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -716,6 +809,79 @@ class PNGTuberApp(QMainWindow):
         print("✅ Tutorial completado")
         self.config_manager.set("tutorial_completed", True)
 
+    def init_system_tray(self):
+        self.tray_icon = QSystemTrayIcon(self)
+        
+        # Icono por defecto (usamos un emoji o lo que sea, idealmente debería ser un .ico/.png)
+        # Como no tenemos un icono fijo, usaremos un pixmap generado o el avatar actual si es posible
+        pixmap = QPixmap(32, 32)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setBrush(QBrush(QColor("#00E64D"))) # Verde PNGTuber
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(0, 0, 32, 32)
+        painter.setPen(QPen(QColor("white")))
+        font = QFont("Arial", 20, QFont.Weight.Bold)
+        painter.setFont(font)
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "P")
+        painter.end()
+        
+        self.tray_icon.setIcon(QIcon(pixmap))
+        
+        # Menú Contextual
+        tray_menu = QMenu()
+        
+        show_action = QAction("Mostrar / Ocultar", self)
+        show_action.triggered.connect(self.toggle_window_visibility)
+        tray_menu.addAction(show_action)
+        
+        tray_menu.addSeparator()
+        
+        mute_action = QAction("Silenciar Micrófono", self)
+        mute_action.setCheckable(True)
+        mute_action.setChecked(self.is_muted)
+        mute_action.triggered.connect(lambda c: self.set_muted(c))
+        # Sincronizar estado visual del menú con el botón
+        self.mute_btn.clicked.connect(lambda: mute_action.setChecked(self.is_muted))
+        tray_menu.addAction(mute_action)
+
+        ai_action = QAction("Modo IA activado", self)
+        ai_action.setCheckable(True)
+        ai_action.setChecked(self.ai_mode)
+        ai_action.triggered.connect(self.toggle_ai_mode_tray)
+        # Sincronizar
+        # Nota: Sincronizar bi-direccionalmente es complejo sin señales dedicadas, 
+        # pero para este caso simple lo dejamos así.
+        tray_menu.addAction(ai_action)
+
+        tray_menu.addSeparator()
+        
+        quit_action = QAction("Salir (Quit)", self)
+        quit_action.triggered.connect(self.quit_application)
+        tray_menu.addAction(quit_action)
+        
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
+        self.tray_icon.show()
+
+    def toggle_window_visibility(self):
+        if self.isVisible():
+            self.hide()
+        else:
+            self.showNormal()
+            self.activateWindow()
+
+    def on_tray_icon_activated(self, reason):
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self.toggle_window_visibility()
+
+    def toggle_ai_mode_tray(self, checked):
+        if checked:
+            self.handle_hotkey("ai_mode")
+        else:
+             # Modo manual 'neutral' al desactivar
+             self.handle_hotkey("neutral")
+
     # --- SISTEMA DE ACTUALIZACIONES ---
     def on_update_found(self, url, version):
         """Se llama cuando el hilo detecta una versión nueva"""
@@ -724,6 +890,15 @@ class PNGTuberApp(QMainWindow):
         self.update_btn.setText(f"⬇️  Actualización v{version} Disponible")
         self.update_btn.setVisible(True)
         print(f"Update detected: {version}")
+        
+        # Notificación en Tray
+        if self.tray_icon.isVisible():
+            self.tray_icon.showMessage(
+                "Actualización Disponible",
+                f"La versión {version} está lista para descargar.",
+                QSystemTrayIcon.MessageIcon.Information,
+                3000
+            )
 
     def confirm_update(self):
         """Se llama al hacer clic en el botón de la barra superior"""
@@ -740,6 +915,8 @@ class PNGTuberApp(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    # Importante para que no se cierre al cerrar la ventana si el tray está activo
+    app.setQuitOnLastWindowClosed(False) 
     window = PNGTuberApp()
     window.show()
     sys.exit(app.exec())

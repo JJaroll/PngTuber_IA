@@ -4,7 +4,7 @@
     "bounce_amplitude": 10,
     "bounce_speed": 0.4,
     "shadow_enabled": false,
-    "is_muted": false,
+    "is_muted": true,
     "background_color": "rgba(183, 102, 153, 255)",
     "microphone_index": 1,
     "enable_hotkeys": true,
