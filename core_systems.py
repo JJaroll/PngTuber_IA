@@ -19,8 +19,9 @@ import threading
 import numpy as np
 import pyaudio
 import torch
+from torch import nn
 from PyQt6.QtCore import QThread, pyqtSignal, QObject
-from transformers import AutoModelForAudioClassification, Wav2Vec2FeatureExtractor
+from transformers import AutoModelForAudioClassification, Wav2Vec2FeatureExtractor, Wav2Vec2PreTrainedModel, Wav2Vec2Model
 from huggingface_hub import snapshot_download
 import sys
 import re
@@ -48,7 +49,7 @@ SUPPORTED_MODELS = {
         }
     },
     "english": {
-        "name": "Global/Inglés (XLS-R)",
+        "name": "Global (Ehcalabres)",
         "id": "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
         "avatar_states": ["neutral", "happy", "sad", "angry", "surprise", "disgust", "fear"],
         "mapping": {
@@ -91,6 +92,46 @@ class DownloadStream(QObject):
     def flush(self):
         pass
 
+class EhcalabresHead(nn.Module):
+    """La 'cabeza' específica que estructura las capas internas"""
+    def __init__(self, config):
+        super().__init__()
+        # Replicamos exactamente 'classifier.dense'
+        self.dense = nn.Linear(config.hidden_size, config.hidden_size)
+        self.dropout = nn.Dropout(getattr(config, "final_dropout", 0.1))
+        # Replicamos exactamente 'classifier.output'
+        self.output = nn.Linear(config.hidden_size, config.num_labels)
+
+    def forward(self, features, **kwargs):
+        x = features
+        x = self.dropout(x)
+        x = self.dense(x)
+        x = torch.tanh(x)
+        x = self.dropout(x)
+        x = self.output(x)
+        return x
+
+class EhcalabresModel(Wav2Vec2PreTrainedModel):
+    """El modelo principal que contiene la cabeza"""
+    def __init__(self, config):
+        super().__init__(config)
+        self.wav2vec2 = Wav2Vec2Model(config)
+        self.dropout = nn.Dropout(getattr(config, "final_dropout", 0.1))
+        
+        # AQUÍ ESTÁ LA MAGIA:
+        # Al llamar a esto 'self.classifier' y usar la clase de arriba...
+        # ...se crean automáticamente 'classifier.dense' y 'classifier.output'
+        self.classifier = EhcalabresHead(config)
+        
+        self.init_weights()
+
+    def forward(self, input_values):
+        outputs = self.wav2vec2(input_values)
+        hidden_states = outputs[0]
+        # Promedio (Mean Pooling)
+        hidden_states = torch.mean(hidden_states, dim=1)
+        logits = self.classifier(hidden_states)
+        return type('ModelOutput', (object,), {'logits': logits})
 class ModelDownloaderThread(QThread):
     finished_signal = pyqtSignal(bool, str)
     progress_update = pyqtSignal(int)
@@ -270,7 +311,12 @@ class EmotionThread(QThread):
         print(f"🧠 Cargando modelo: {config['name']} ({model_id})...")
         try:
             self.feat = Wav2Vec2FeatureExtractor.from_pretrained(model_id)
-            self.model = AutoModelForAudioClassification.from_pretrained(model_id).to(self.device)
+            if "ehcalabres" in model_id:
+                # Usamos nuestra clase personalizada
+                self.model = EhcalabresModel.from_pretrained(model_id).to(self.device)
+            else:
+                # Usamos la carga estándar para otros modelos
+                self.model = AutoModelForAudioClassification.from_pretrained(model_id).to(self.device)
             print("✅ Modelo IA cargado correctamente.")
         except Exception as e:
             print(f"❌ Error cargando modelo: {e}")
