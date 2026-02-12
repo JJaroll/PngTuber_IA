@@ -19,9 +19,11 @@ import threading
 import numpy as np
 import pyaudio
 import torch
-from PyQt6.QtCore import QThread, pyqtSignal
-from transformers import Wav2Vec2ForSequenceClassification, Wav2Vec2FeatureExtractor
+from PyQt6.QtCore import QThread, pyqtSignal, QObject
+from transformers import AutoModelForAudioClassification, Wav2Vec2FeatureExtractor
 from huggingface_hub import snapshot_download
+import sys
+import re
 
 # --- CONFIGURACIÓN ---
 CHUNK_SIZE = 1024
@@ -47,32 +49,83 @@ SUPPORTED_MODELS = {
     },
     "english": {
         "name": "Global/Inglés (XLS-R)",
-        "id": "harshit345/xlsr-wav2vec-speech-emotion-recognition",
+        "id": "ehcalabres/wav2vec2-lg-xlsr-en-speech-emotion-recognition",
         "avatar_states": ["neutral", "happy", "sad", "angry", "surprise", "disgust", "fear"],
         "mapping": {
-            "anger": "angry", "disgust": "disgust", "fear": "fear",
-            "happiness": "happy", "sadness": "sad", "neutral": "neutral",
-            "surprise": "surprise"
+            "angry": "angry",
+            "calm": "neutral",
+            "disgust": "disgust",
+            "fearful": "fear",
+            "happy": "happy",
+            "neutral": "neutral",
+            "sad": "sad",
+            "surprised": "surprise"
         }
     }
 }
 
 # --- Hilo de Descarga ---
+class DownloadStream(QObject):
+    """Intercepta la salida de stderr (tqdm) para emitir señales de progreso y logs."""
+    progress_signal = pyqtSignal(int)
+    log_signal = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+        self.cancel_requested = False
+        self.buffer = ""
+
+    def write(self, text):
+        if self.cancel_requested:
+            raise Exception("Download Cancelled by User")
+
+        self.log_signal.emit(text)
+
+        match = re.search(r"(\d+)%", text)
+        if match:
+            try:
+                percent = int(match.group(1))
+                self.progress_signal.emit(percent)
+            except: pass
+
+    def flush(self):
+        pass
+
 class ModelDownloaderThread(QThread):
     finished_signal = pyqtSignal(bool, str)
+    progress_update = pyqtSignal(int)
+    log_update = pyqtSignal(str)
 
     def __init__(self, model_id):
         super().__init__()
         self.model_id = model_id
+        self.stream = DownloadStream()
+        
+        self.stream.progress_signal.connect(self.progress_update.emit)
+        self.stream.log_signal.connect(self.log_update.emit)
+
+    def cancel(self):
+        self.stream.cancel_requested = True
 
     def run(self):
+        original_stderr = sys.stderr
+        sys.stderr = self.stream
+        
         try:
-            # Intentamos descargar solo los archivos necesarios para el pipeline
             print(f"⬇️ Iniciando descarga de: {self.model_id}")
+            self.log_update.emit(f"Iniciando descarga de: {self.model_id}\n")
+            
             snapshot_download(repo_id=self.model_id)
+            
             self.finished_signal.emit(True, "Descarga completada")
         except Exception as e:
-            self.finished_signal.emit(False, str(e))
+            msg = str(e)
+            if "Download Cancelled" in msg:
+                self.finished_signal.emit(False, "Cancelado por el usuario.")
+            else:
+                self.finished_signal.emit(False, msg)
+        finally:
+            sys.stderr = original_stderr # Restaurar siempre
 
 def is_model_cached(model_id):
     try:
@@ -217,7 +270,7 @@ class EmotionThread(QThread):
         print(f"🧠 Cargando modelo: {config['name']} ({model_id})...")
         try:
             self.feat = Wav2Vec2FeatureExtractor.from_pretrained(model_id)
-            self.model = Wav2Vec2ForSequenceClassification.from_pretrained(model_id).to(self.device)
+            self.model = AutoModelForAudioClassification.from_pretrained(model_id).to(self.device)
             print("✅ Modelo IA cargado correctamente.")
         except Exception as e:
             print(f"❌ Error cargando modelo: {e}")

@@ -5,7 +5,7 @@
     "bounce_speed": 0.4,
     "shadow_enabled": false,
     "is_muted": false,
-    "background_color": "rgba(183, 102, 153, 255)",
+    "background_color": "rgba(0, 0, 0, 100)",
     "microphone_index": 1,
     "enable_hotkeys": true,
     "hotkeys": {
@@ -21,7 +21,7 @@
     },
     "mic_sensitivity": 2.2,
     "audio_threshold": 0.024,
-    "tutorial_completed": false,
-    "ai_model": "spanish",
+    "tutorial_completed": true,
+    "ai_model": "english",
     "check_updates": true
 }

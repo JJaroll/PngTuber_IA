@@ -684,6 +684,11 @@ class PNGTuberApp(QMainWindow):
         
         # Conectar señales
         self.downloader.finished_signal.connect(lambda success, msg: self.on_download_finished(success, msg, model_key))
+        self.downloader.progress_update.connect(self.download_dialog.update_progress)
+        self.downloader.log_update.connect(self.download_dialog.append_log)
+        
+        # Conectar botón de cancelar
+        self.download_dialog.btn_cancel.clicked.connect(self.downloader.cancel)
         
         # Iniciar
         self.downloader.start()

@@ -14,7 +14,7 @@ __version__ = "1.0.0"
 __maintainer__ = "JJaroll"
 __status__ = "Production"
 
-from PyQt6.QtWidgets import QWidget, QDialog, QVBoxLayout, QLabel
+from PyQt6.QtWidgets import QWidget, QDialog, QVBoxLayout, QLabel, QTextEdit, QPushButton, QHBoxLayout
 from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QFont
 from PyQt6.QtCore import Qt, QRect, QPoint
 
@@ -128,5 +128,55 @@ class DownloadDialog(QDialog):
 
         # Barra de progreso indeterminada
         self.progress = PillProgressBar()
-        self.progress.setValue(50) 
+        self.progress.setValue(0) 
         layout.addWidget(self.progress)
+        
+        # Etiqueta de porcentaje
+        self.lbl_percent = QLabel("0%")
+        self.lbl_percent.setStyleSheet("color: white; font-weight: bold;")
+        self.lbl_percent.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.lbl_percent)
+
+        # Consola de Logs
+        self.log_console = QTextEdit()
+        self.log_console.setReadOnly(True)
+        self.log_console.setStyleSheet("""
+            QTextEdit {
+                background-color: #111;
+                color: #00ff00;
+                font-family: monospace;
+                font-size: 10px;
+                border: 1px solid #333;
+                border-radius: 5px;
+            }
+        """)
+        self.log_console.setFixedHeight(100)
+        layout.addWidget(self.log_console)
+
+        # Botón de Cancelar
+        self.btn_cancel = QPushButton("Cancelar")
+        self.btn_cancel.setStyleSheet("""
+            QPushButton {
+                background-color: #ff4444;
+                color: white;
+                border-radius: 5px;
+                padding: 5px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #ff6666;
+            }
+        """)
+        layout.addWidget(self.btn_cancel)
+
+        # Ajustar tamaño para acomodar nuevos widgets
+        self.setFixedSize(400, 350)
+
+    def update_progress(self, percent):
+        self.progress.setValue(percent)
+        self.lbl_percent.setText(f"{percent}%")
+
+    def append_log(self, text):
+        self.log_console.moveCursor(self.log_console.textCursor().MoveOperation.End)
+        self.log_console.insertPlainText(text)
+        self.log_console.ensureCursorVisible()
