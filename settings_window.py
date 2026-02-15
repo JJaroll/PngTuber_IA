@@ -1,5 +1,5 @@
 """
-PNGTuber IA
+(AI)terEgo
 -----------
 Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
 
@@ -123,7 +123,7 @@ class SettingsDialog(QDialog):
         self.main_window = main_window
         self.bg_manager = main_window.bg_manager
         
-        self.setWindowTitle("Configuración - PNGTuber IA")
+        self.setWindowTitle("Configuración - (AI)terEgo")
         self.resize(700, 600)
         
         self.setStyleSheet("""
@@ -797,12 +797,24 @@ class SettingsDialog(QDialog):
         layout.setContentsMargins(40, 40, 40, 40)
         layout.setSpacing(15)
 
-        lbl_icon = QLabel("🎙️")
-        lbl_icon.setStyleSheet("font-size: 64px;")
+        lbl_icon = QLabel()
+        icon_path = os.path.join(os.path.dirname(__file__), "assets", "IA.png")
+        
+        if os.path.exists(icon_path):
+            pix = QPixmap(icon_path)
+            if not pix.isNull():
+                lbl_icon.setPixmap(pix.scaled(128, 128, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            else:
+                lbl_icon.setText("🎙️")
+                lbl_icon.setStyleSheet("font-size: 64px;")
+        else:
+            lbl_icon.setText("🎙️")
+            lbl_icon.setStyleSheet("font-size: 64px;")
+
         lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(lbl_icon)
 
-        lbl_title = QLabel("AI PNGTuber")
+        lbl_title = QLabel("(AI)terEgo")
         lbl_title.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
         lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(lbl_title)
