@@ -1,18 +1,7 @@
 """
-(AI)terEgo
------------
-Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
-
-Desarrollado por: JJaroll
-GitHub: https://github.com/JJaroll
-Fecha: 10/02/2026
-Licencia: MIT
+(AI)terEgo - Settings Window
+Ventana de configuración corregida para macOS y PyInstaller.
 """
-
-__author__ = "JJaroll"
-__version__ = "1.0.0"
-__maintainer__ = "JJaroll"
-__status__ = "Production"
 
 import os
 import sys
@@ -193,7 +182,7 @@ class SettingsDialog(QDialog):
                     self.last_color_hex = new_color
         except: pass
 
-    # --- PESTAÑA AUDIO CORREGIDA ---
+    # --- PESTAÑA AUDIO ---
     def create_audio_tab(self):
         tab = QWidget()
         layout = QFormLayout(tab)
@@ -677,7 +666,7 @@ class SettingsDialog(QDialog):
         if hasattr(self, 'current_model_path') and self.current_model_path:
             QDesktopServices.openUrl(QUrl.fromLocalFile(self.current_model_path))
 
-    # --- PESTAÑA SISTEMA ---
+    # --- PESTAÑA SISTEMA CORREGIDA ---
     def create_system_tab(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
@@ -757,22 +746,30 @@ class SettingsDialog(QDialog):
         self.chk_updates.toggled.connect(lambda v: self.main_window.config_manager.set("check_updates", v))
         size_layout.addRow("", self.chk_updates)
         
-        total_size = 0
-        file_count = 0
-        exclude_dirs = {'venv', '.git', '__pycache__', '.idea', '.vscode'}
-        
-        for dirpath, dirnames, filenames in os.walk(current_path):
-            dirnames[:] = [d for d in dirnames if d not in exclude_dirs]
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                if not os.path.islink(fp):
-                    total_size += os.path.getsize(fp)
-                    file_count += 1
-        
-        size_str = f"{total_size / (1024*1024):.2f} MB"
-        
-        size_layout.addRow("Peso Total (aprox):", QLabel(size_str))
-        size_layout.addRow("Archivos:", QLabel(str(file_count)))
+        # --- FIX PARA MAC: Evitamos os.walk en modo empaquetado ---
+        if getattr(sys, 'frozen', False):
+            size_layout.addRow("Peso Total:", QLabel("(Cálculo desactivado en App)"))
+            size_layout.addRow("Archivos:", QLabel("(Oculto por rendimiento)"))
+        else:
+            try:
+                total_size = 0
+                file_count = 0
+                exclude_dirs = {'venv', '.git', '__pycache__', '.idea', '.vscode'}
+                
+                for dirpath, dirnames, filenames in os.walk(current_path):
+                    dirnames[:] = [d for d in dirnames if d not in exclude_dirs]
+                    for f in filenames:
+                        fp = os.path.join(dirpath, f)
+                        if not os.path.islink(fp):
+                            total_size += os.path.getsize(fp)
+                            file_count += 1
+                
+                size_str = f"{total_size / (1024*1024):.2f} MB"
+                size_layout.addRow("Peso Total (aprox):", QLabel(size_str))
+                size_layout.addRow("Archivos:", QLabel(str(file_count)))
+            except Exception as e:
+                size_layout.addRow("Estado:", QLabel("Error de cálculo"))
+
         size_group.setLayout(size_layout)
         layout.addWidget(size_group)
 
