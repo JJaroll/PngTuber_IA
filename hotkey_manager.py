@@ -14,9 +14,10 @@ __version__ = "1.0.0"
 __maintainer__ = "JJaroll"
 __status__ = "Production"
 
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer
-import multiprocessing
-from hotkey_process import run_hotkey_listener
+import sys
+from PyQt6.QtCore import QObject, pyqtSignal, QEvent, Qt
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QKeySequence
 
 class HotkeyManager(QObject):
     hotkey_triggered = pyqtSignal(str)
@@ -24,77 +25,96 @@ class HotkeyManager(QObject):
     def __init__(self, config_manager):
         super().__init__()
         self.config_manager = config_manager
-        self.process = None
-        self.queue = None
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.check_queue)
-        
-        # Mapeo invertido para la UI: action -> key
-        # Para el proceso necesitamos key -> action
-        self.mapping = {}
-        self.reverse_mapping = {} # key_str -> action (lo que enviamos al proceso)
-        self.reload_mapping()
+        self.listening = False
+        self.key_map = {} 
+        self.load_hotkeys()
 
-    def reload_mapping(self):
-        hotkeys = self.config_manager.get("hotkeys", {})
-        self.mapping = hotkeys
+    def load_hotkeys(self):
+        """Traduce la configuración a códigos numéricos de Qt"""
+        raw_hotkeys = self.config_manager.get("hotkeys", {})
         
-        # Preparar mapeo para el proceso: key -> action
-        self.reverse_mapping = {}
-        for action, key in hotkeys.items():
-            if key:
-                self.reverse_mapping[str(key).lower()] = action
+        # Mapeo por defecto
+        default_hotkeys = {
+            "mute_toggle": "M",
+            "ai_mode": "X",
+            "neutral": "1",
+            "happiness": "2",
+            "sadness": "3",
+            "anger": "4",
+            "surprise": "5",
+            "fear": "6",
+            "disgust": "7"
+        }
+
+        final_hotkeys = default_hotkeys.copy()
+        final_hotkeys.update(raw_hotkeys)
+
+        self.key_map = {}
         
-        # Si el proceso está corriendo, habría que reiniciarlo para aplicar cambios
-        if self.process and self.process.is_alive():
-            self.stop_listening()
-            self.start_listening()
+        for action, key_str in final_hotkeys.items():
+            if key_str:
+                try:
+                    # Limpiamos y formateamos la tecla
+                    clean_str = str(key_str).replace("<", "").replace(">", "").title()
+                    # QKeySequence calcula el código entero único para esa tecla
+                    seq = QKeySequence(clean_str)
+                    if not seq.isEmpty():
+                        qt_code = seq[0].toCombined()
+                        self.key_map[qt_code] = action
+                except Exception as e:
+                    print(f"Error mapeando tecla {key_str}: {e}")
 
     def start_listening(self):
-        if self.process and self.process.is_alive():
-            return
-
-        if not self.config_manager.get("enable_hotkeys", True):
-            print("Hotkeys deshabilitados por configuración.")
-            return
-
-        try:
-            self.queue = multiprocessing.Queue()
-            # Pasamos el diccionario inverso {tecla: accion}
-            self.process = multiprocessing.Process(
-                target=run_hotkey_listener, 
-                args=(self.queue, self.reverse_mapping)
-            )
-            self.process.daemon = True # Se muere si el principal muere
-            self.process.start()
-            
-            self.timer.start(50) # Revisar cada 50ms
-            print("Proceso de hotkeys iniciado (PID: {})".format(self.process.pid))
-            
-        except Exception as e:
-            print(f"Error iniciando proceso de hotkeys: {e}")
+        if not self.listening:
+            app = QApplication.instance()
+            if app:
+                app.installEventFilter(self)
+                self.listening = True
+                print("⌨️  Gestor de atajos iniciado (Modo Nativo PyQt)")
 
     def stop_listening(self):
-        self.timer.stop()
-        if self.process:
-            if self.process.is_alive():
-                self.process.terminate()
-                self.process.join(timeout=1)
-            self.process = None
-            self.queue = None
+        if self.listening:
+            app = QApplication.instance()
+            if app:
+                app.removeEventFilter(self)
+            self.listening = False
 
-    def check_queue(self):
-        if not self.queue: return
-        while not self.queue.empty():
+    def _safe_get_value(self, obj):
+        try:
+            return obj.value # Para PyQt6 Enums
+        except AttributeError:
             try:
-                action = self.queue.get_nowait()
-                if action:
-                    self.hotkey_triggered.emit(action)
-            except: 
-                break
+                return int(obj) # Para enteros normales
+            except:
+                return 0
 
-    def update_hotkey(self, action, key_str):
+    def eventFilter(self, obj, event):
+        try:
+            if event.type() == QEvent.Type.KeyPress:
+                key_val = self._safe_get_value(event.key())
+                mod_val = self._safe_get_value(event.modifiers())
+                
+                # Ignorar si es solo una tecla de control (Ctrl, Shift, etc presionados solos)
+                if 16777248 <= key_val <= 16777255: 
+                    return super().eventFilter(obj, event)
+                current_combo = key_val | mod_val
+                
+                # 4. Verificar coincidencia
+                if current_combo in self.key_map:
+                    action = self.key_map[current_combo]
+                    print(f"⚡ Acción ejecutada: {action}")
+                    self.hotkey_triggered.emit(action)
+                    return True # Consumir evento
+                    
+        except Exception as e:
+            # En caso de error, NO abortamos la app, solo lo reportamos y continuamos
+            print(f"⚠️ Error recuperable en teclas: {e}")
+            
+        # Dejar pasar el evento normalmente
+        return super().eventFilter(obj, event)
+
+    def update_hotkey(self, action, new_key):
         current = self.config_manager.get("hotkeys", {})
-        current[action] = key_str
+        current[action] = new_key
         self.config_manager.set("hotkeys", current)
-        self.reload_mapping()
+        self.load_hotkeys()
