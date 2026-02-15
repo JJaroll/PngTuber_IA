@@ -1,5 +1,5 @@
 """
-PNGTuber IA
+(AI)terEgo
 -----------
 Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
 
@@ -771,7 +771,7 @@ class PNGTuberApp(QMainWindow):
             tutorial_done = self.config_manager.get("tutorial_completed", False)
             
             if not tutorial_done and not self.tray_message_shown:
-                QMessageBox.information(self, "PNGTuber", 
+                QMessageBox.information(self, "(AI)terEgo", 
                                         "La aplicación seguirá ejecutándose en la bandeja del sistema.\nPara salir completamente, usa el menú del icono o 'Quit' en el menú de la aplicación.")
                 self.tray_message_shown = True
             
@@ -931,7 +931,7 @@ def print_signature():
     ║ ╚█████╔╝╚█████╔╝ ██║  ██║██║  ██║╚██████╔╝███████╗███████╗           ║
     ║  ╚════╝  ╚════╝  ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝           ║
     ║                                                                      ║
-    ║   PNGTuber IA v1.0.0 - "Dando vida a los píxeles."                   ║
+    ║   (AI)terEgo v1.0.0 - "Dando vida a los píxeles."                    ║
     ║   GitHub: github.com/JJaroll                                         ║
     ║                                                                      ║
     ╚══════════════════════════════════════════════════════════════════════╝
