@@ -1,8 +1,8 @@
-# 🎙️ AI PNGTuber (Python + PyTorch)
+# 🎙️ (AI)terEgo (Python + PyTorch)
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue) ![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-red) ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS-lightgrey) ![License](https://img.shields.io/badge/License-MIT-green) ![Version](https://img.shields.io/badge/Version-1.0.0-blue)
 
-Un **PNGTuber inteligente** y moderno escrito en Python. A diferencia de los PNGTubers tradicionales que solo reaccionan al volumen, este proyecto utiliza **Inteligencia Artificial (Wav2Vec2)** para analizar tu tono de voz en tiempo real y cambiar la expresión de tu avatar automáticamente.
+**(AI)terEgo** es una aplicación de avatar virtual inteligente y moderna escrita en Python. A diferencia de los PNGTubers tradicionales que solo reaccionan al volumen, este proyecto utiliza **Inteligencia Artificial (Wav2Vec2)** para analizar tu tono de voz en tiempo real y cambiar la expresión de tu avatar automáticamente.
 
 Ideal para streamers, creadores de contenido o simplemente para divertirse en Discord/Zoom.
 
