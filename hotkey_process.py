@@ -1,5 +1,5 @@
 """
-PNGTuber IA
+(AI)terEgo
 -----------
 Una aplicación de avatar virtual controlada por voz e Inteligencia Artificial.
 
