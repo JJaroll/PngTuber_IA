@@ -37,8 +37,8 @@ Ideal para streamers, creadores de contenido o simplemente para divertirse en Di
 ### Pasos
 1.  **Clonar el repositorio:**
     ```bash
-    git clone https://github.com/JJaroll/Ai_terego.git
-    cd Ai_terego
+    git clone https://github.com/JJaroll/Ai_terEgo.git
+    cd Ai_terEgo
     ```
 
 2.  **Crear un entorno virtual (Recomendado):**
