@@ -1,0 +1,69 @@
+@echo off
+chcp 65001 > nul
+title AIterEgo - Compilador GPU (NVIDIA CUDA)
+color 0B
+
+echo.
+echo ╔══════════════════════════════════════════════════════════════════════╗
+echo ║                                                                      ║
+echo ║      ██╗     ██╗  █████╗ ██████╗  ██████╗ ██╗     ██╗                ║
+echo ║      ██║     ██║ ██╔══██╗██╔══██╗██╔═══██╗██║     ██║                ║
+echo ║      ██║     ██║ ███████║██████╔╝██║   ██║██║     ██║                ║
+echo ║ ██╗  ██║██╗  ██║ ██╔══██║██╔══██╗██║   ██║██║     ██║                ║
+echo ║ ╚█████╔╝╚█████╔╝ ██║  ██║██║  ██║╚██████╔╝███████╗███████╗           ║
+echo ║  ╚════╝  ╚════╝  ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝           ║
+echo ║                                                                      ║
+echo ║   (AI)terEgo v1.0.0 - "Dando vida a los píxeles."                    ║
+echo ║   GitHub: github.com/JJaroll                                         ║
+echo ║                                                                      ║
+echo ╚══════════════════════════════════════════════════════════════════════╝
+echo.
+
+echo ===================================================
+echo   Construyendo (AI)terEgo - Version GPU (NVIDIA)
+echo ===================================================
+echo.
+
+echo [1/5] Verificando entorno virtual (venv_gpu)...
+if not exist venv_gpu (
+    echo Creando nuevo entorno virtual...
+    python -m venv venv_gpu
+)
+
+echo.
+echo [2/5] Activando entorno e instalando dependencias (CUDA)...
+call venv_gpu\Scripts\activate.bat
+python -m pip install --upgrade pip
+echo Instalando PyTorch CUDA 12.1 (Para tarjetas NVIDIA)...
+pip install torch==2.2.1+cu121 torchaudio==2.2.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+echo Instalando dependencias del sistema...
+pip install "numpy<2" "transformers<4.40" pyaudio sounddevice librosa PyQt6 pyinstaller
+
+echo.
+echo [3/5] REPARACIÓN AUTOMÁTICA DE ÍCONO (Multicapa)...
+python -c "from PIL import Image; img=Image.open('assets/IA.png'); img.save('assets/app_icon.ico', format='ICO', sizes=[(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)])"
+
+echo.
+echo [4/5] Limpiando caches de compilacion...
+if exist build rmdir /s /q build
+if exist dist\AIterEgo_GPU rmdir /s /q dist\AIterEgo_GPU
+if exist AIterEgo_GPU.spec del /f /q AIterEgo_GPU.spec
+
+echo.
+echo [5/5] Compilando con PyInstaller (Modo GPU)...
+pyinstaller --clean --noconfirm --onedir --windowed --name "AIterEgo_GPU" ^
+    --add-data "assets;assets" ^
+    --icon "assets/app_icon.ico" ^
+    --hidden-import pyaudio ^
+    --hidden-import sounddevice ^
+    main.py
+
+echo.
+echo ========================================================
+echo   Compilacion GPU finalizada con exito.
+echo   Tu ejecutable esta en: dist\AIterEgo_GPU
+echo.
+echo   ADVERTENCIA: Esta carpeta pesara mas de 3 GB debido 
+echo   a las librerias nativas de NVIDIA CUDA.
+echo ========================================================
+pause
