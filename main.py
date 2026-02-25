@@ -18,9 +18,10 @@ import sys
 import multiprocessing
 import numpy as np
 import os
+import ctypes
 from PyQt6.QtWidgets import (QApplication, QLabel, QMainWindow, QVBoxLayout, 
                              QWidget, QHBoxLayout, QSizeGrip, QGraphicsDropShadowEffect, 
-                             QPushButton, QSizePolicy, QMessageBox, QSystemTrayIcon, QMenu)
+                             QPushButton, QSizePolicy, QMessageBox, QSystemTrayIcon, QMenu, QSplashScreen)
 from PyQt6.QtCore import Qt, QTimer, QUrl, QPoint, QPropertyAnimation, QEasingCurve, QSize
 from PyQt6.QtGui import (QPixmap, QPainter, QColor, QTransform, QShortcut, 
                          QKeySequence, QDesktopServices, QPen, QFont, QBrush, QIcon, QAction)
@@ -124,6 +125,15 @@ class PNGTuberApp(QMainWindow):
         self.tray_message_shown = False
 
     def init_ui(self):
+
+        if os.name == 'nt':  # Si es Windows
+            icon_name = "app_icon.ico"
+        else:                # Si es macOS o Linux
+            icon_name = "app_icon.icns"
+            
+        icon_path = resource_path(f"assets/{icon_name}")
+        self.setWindowIcon(QIcon(icon_path))
+
         # Flags Cruciales para Mac
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
@@ -661,7 +671,11 @@ class PNGTuberApp(QMainWindow):
         self.shadow_enabled = enabled
         self.config_manager.set("shadow_enabled", enabled)
         if enabled:
-            self.avatar_label.setGraphicsEffect(self.shadow_effect)
+            shadow = QGraphicsDropShadowEffect()
+            shadow.setBlurRadius(20)
+            shadow.setColor(QColor(0, 0, 0, 150))
+            shadow.setOffset(0, 5)
+            self.avatar_label.setGraphicsEffect(shadow)
         else:
             self.avatar_label.setGraphicsEffect(None)
 
@@ -848,28 +862,63 @@ def print_signature():
     ║                                                                      ║
     ╚══════════════════════════════════════════════════════════════════════╝
     """
-    print(signature)
+    try:
+        print(signature)
+    except UnicodeEncodeError:
+        # Si la consola de Windows no soporta los caracteres, simplemente lo ignoramos
+        pass
 
-def setup_mac_environment():
-    import os
-    import sys
+def setup_app_environment():
     
     if getattr(sys, 'frozen', False):
-        sys.stdout = open(os.devnull, 'w')
-        sys.stderr = open(os.devnull, 'w')
+        # encoding='utf-8' para que Windows no crashee con los prints especiales
+        sys.stdout = open(os.devnull, 'w', encoding='utf-8')
+        sys.stderr = open(os.devnull, 'w', encoding='utf-8')
         
         current_dir = os.path.dirname(sys.executable)
         os.chdir(current_dir)
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-    setup_mac_environment()
+    setup_app_environment()
     print_signature() 
     
-    app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(False) 
+    if os.name == 'nt':
+        import ctypes
+        myappid = u'jjaroll.aiterego.avatar.v1' 
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     
+    app = QApplication(sys.argv)
+    
+    if os.name == 'nt':
+        icon_path = resource_path("assets/app_icon.ico")
+    else:
+        icon_path = resource_path("assets/app_icon.icns")
+    
+    app_icon = QIcon(icon_path)
+    app.setWindowIcon(app_icon)
+
+    app.setQuitOnLastWindowClosed(False) 
+
+    # ==========================================
+    # 🚀 SPLASH SCREEN (VENTANA DE CARGA)
+    # ==========================================
+    splash_pix = QPixmap(resource_path("assets/IA.png"))
+    splash_pix = splash_pix.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    
+    splash = QSplashScreen(splash_pix, Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.FramelessWindowHint)
+    splash.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+    splash.show()
+    
+    # Procesar eventos para que el Splash se dibuje mientras cargamos la IA
+    app.processEvents() 
+    
+    # Inicializar Ventana Principal
     window = PNGTuberApp()
+    
     window.show()
+    
+    # Cerrar Splash suavemente
+    splash.finish(window)
     
     sys.exit(app.exec())
