@@ -24,14 +24,14 @@ echo   Construyendo (AI)terEgo - Version GPU (NVIDIA)
 echo ===================================================
 echo.
 
-echo [1/5] Verificando entorno virtual (venv_gpu)...
+echo [1/6] Verificando entorno virtual (venv_gpu)...
 if not exist venv_gpu (
     echo Creando nuevo entorno virtual...
     python -m venv venv_gpu
 )
 
 echo.
-echo [2/5] Activando entorno e instalando dependencias (CUDA)...
+echo [2/6] Activando entorno e instalando dependencias (CUDA)...
 call venv_gpu\Scripts\activate.bat
 python -m pip install --upgrade pip
 echo Instalando PyTorch CUDA 12.1 (Para tarjetas NVIDIA)...
@@ -40,23 +40,27 @@ echo Instalando dependencias del sistema...
 pip install "numpy<2" "transformers<4.40" pyaudio sounddevice librosa PyQt6 pyinstaller
 
 echo.
-echo [3/5] REPARACIÓN AUTOMÁTICA DE ÍCONO (Multicapa)...
+echo [3/6] REPARACIÓN AUTOMÁTICA DE ÍCONO (Multicapa)...
 python -c "from PIL import Image; img=Image.open('assets/IA.png'); img.save('assets/app_icon.ico', format='ICO', sizes=[(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)])"
 
 echo.
-echo [4/5] Limpiando caches de compilacion...
+echo [4/6] Limpiando caches de compilacion...
 if exist build rmdir /s /q build
 if exist dist\AIterEgo_GPU rmdir /s /q dist\AIterEgo_GPU
 if exist AIterEgo_GPU.spec del /f /q AIterEgo_GPU.spec
 
 echo.
-echo [5/5] Compilando con PyInstaller (Modo GPU)...
+echo [5/6] Compilando con PyInstaller (Modo GPU)...
 pyinstaller --clean --noconfirm --onedir --windowed --name "AIterEgo_GPU" ^
     --add-data "assets;assets" ^
     --icon "assets/app_icon.ico" ^
     --hidden-import pyaudio ^
     --hidden-import sounddevice ^
     main.py
+
+echo.
+echo [6/6] Comprimiendo la aplicacion en un archivo .zip para distribucion...
+powershell -command "Compress-Archive -Path 'dist\(AI)terEgo' -DestinationPath 'Ai_terego_Windows_GPU.zip' -Force"
 
 echo.
 echo ========================================================
