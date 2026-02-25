@@ -20,8 +20,8 @@ APP_NAME="(AI)terEgo"
 ENTRY_POINT="main.py"
 PKG_NAME="aiterego"
 VERSION="1.0.0"
-TAR_NAME="Ai_terego_Linux_CPU.tar.gz"
-DEB_NAME="Ai_terego_Linux_CPU.deb"
+TAR_NAME="Ai_terEgo_Linux_CPU.tar.gz"
+DEB_NAME="Ai_terEgo_Linux_CPU.deb"
 
 cd "$(dirname "$0")"
 
