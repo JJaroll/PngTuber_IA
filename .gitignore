@@ -1,19 +1,31 @@
-build/
-dist/
-*.spec
-avatars/
-models/
-hf_cache/
-.cache/
-pngtuberIA/
+# === Python y Entornos Virtuales ===
 __pycache__/
 *.py[cod]
 *$py.class
 venv/
+venv_build/
+venv_cpu/
+venv_gpu/
 env/
 .env
+
+# === Compilación (PyInstaller) y Lanzamientos ===
+build/
+dist/
+*.spec
+*.zip
+*.dmg
+crash_log.txt
+
+# === Datos de la Aplicación y Caché de IA ===
+avatars/
+models/
+hf_cache/
+.cache/
 settings.json
 *.ptuber
+
+# === Entornos de Desarrollo (IDEs) y SO ===
 .vscode/
 .idea/
 .DS_Store
