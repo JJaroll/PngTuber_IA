@@ -41,12 +41,12 @@ Ideal para streamers, creadores de contenido o simplemente para divertirse en Di
 ¡(AI)terEgo está disponible de forma nativa para todas las plataformas! Elige la versión correspondiente a tu sistema operativo para descargar la aplicación lista para usar (no requiere Python).
 
 ### 🍎 macOS
-* **Apple Silicon (M1 o superior):** [Descargar (AI)terEgo_Apple_Silicon.dmg](https://github.com/JJaroll/Ai_terEgo/releases/download/v1.0.0/%28AI%29terEgo_Apple_Silicon.dmg)
-* **Intel:** [Descargar (AI)terEgo_Intel.dmg](https://github.com/JJaroll/Ai_terEgo/releases/download/v1.0.0/%28AI%29terEgo_Intel.dmg)
+* **Apple Silicon (M1 o superior):** [Descargar (AI)terEgo_Apple_Silicon.dmg](https://github.com/JJaroll/Ai_terEgo/releases/download/v1.0.0/AI.terEgo_Apple_Silicon.dmg)
+* **Intel:** [Descargar (AI)terEgo_Intel.dmg](https://github.com/JJaroll/Ai_terEgo/releases/download/v1.0.0/AI.terEgo_Intel.dmg)
   > **Instalación:** Abre el archivo `.dmg` y arrastra la aplicación a tu carpeta de Aplicaciones. Al abrirla por primera vez, macOS te solicitará permisos para usar el micrófono; debes aceptarlos para que el avatar reaccione.
 
 ### 🪟 Windows
-* **Versión CPU (Ligera - Recomendada):** [Descargar (AI)terEgo_CPU_Win-x64.zip](https://github.com/JJaroll/Ai_terEgo/releases/download/v1.0.0/%28AI%29terEgo_CPU_Win-x64.zip)
+* **Versión CPU (Ligera - Recomendada):** [Descargar (AI)terEgo_CPU_Win-x64.zip](https://github.com/JJaroll/Ai_terEgo/releases/download/v1.0.0/AI.terEgo_CPU_Win-x64.zip)
 * **Versión GPU (Nvidia CUDA):** [Descargar (AI)terEgo_GPU_Win-64.zip](https://drive.google.com/file/d/154DRv8xT6BG37Fc4wkSMSnRo75FLDeco/view?usp=sharing)
   > **Instalación:** Descomprime el archivo `.zip` en una carpeta de tu preferencia y ejecuta el archivo `.exe`. No requiere instalación en el sistema.
 
